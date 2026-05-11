@@ -145,13 +145,11 @@ public class CodexFetcher : IUsageFetcher
 
     private static (string? Token, string? AccountId) ReadAuth(AppSettings settings)
     {
-        // Use settings values if provided (override auth.json)
-        if (!string.IsNullOrWhiteSpace(settings.CodexAuthToken) &&
-            !string.IsNullOrWhiteSpace(settings.CodexAccountId))
-        {
-            return (settings.CodexAuthToken, settings.CodexAccountId);
-        }
+        // Field-by-field merge: settings override auth.json
+        string? token = null;
+        string? accountId = null;
 
+        // Try auth.json first
         try
         {
             var path = Path.Combine(
@@ -159,36 +157,36 @@ public class CodexFetcher : IUsageFetcher
                 ".codex", "auth.json"
             );
 
-            if (!File.Exists(path))
-                return (null, null);
-
-            var json = File.ReadAllText(path);
-            var doc = JsonDocument.Parse(json);
-
-            string? token = null;
-            string? accountId = null;
-
-            if (doc.RootElement.TryGetProperty("tokens", out var tokens))
+            if (File.Exists(path))
             {
-                if (tokens.TryGetProperty("access_token", out var at))
-                    token = at.GetString();
-                if (tokens.TryGetProperty("account_id", out var ai))
-                    accountId = ai.GetString();
+                var json = File.ReadAllText(path);
+                var doc = JsonDocument.Parse(json);
 
-                // Fallback: tokens.id_token.chatgpt_account_id
-                if (string.IsNullOrWhiteSpace(accountId) &&
-                    tokens.TryGetProperty("id_token", out var idToken))
+                if (doc.RootElement.TryGetProperty("tokens", out var tokens))
                 {
-                    if (idToken.TryGetProperty("chatgpt_account_id", out var cai))
-                        accountId = cai.GetString();
+                    if (tokens.TryGetProperty("access_token", out var at))
+                        token = at.GetString();
+                    if (tokens.TryGetProperty("account_id", out var ai))
+                        accountId = ai.GetString();
+
+                    // Fallback: tokens.id_token.chatgpt_account_id
+                    if (string.IsNullOrWhiteSpace(accountId) &&
+                        tokens.TryGetProperty("id_token", out var idToken))
+                    {
+                        if (idToken.TryGetProperty("chatgpt_account_id", out var cai))
+                            accountId = cai.GetString();
+                    }
                 }
             }
+        }
+        catch { /* ignore auth.json read errors */ }
 
-            return (token, accountId);
-        }
-        catch
-        {
-            return (null, null);
-        }
+        // Settings override
+        if (!string.IsNullOrWhiteSpace(settings.CodexAuthToken))
+            token = settings.CodexAuthToken;
+        if (!string.IsNullOrWhiteSpace(settings.CodexAccountId))
+            accountId = settings.CodexAccountId;
+
+        return (token, accountId);
     }
 }
