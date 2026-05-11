@@ -1,0 +1,77 @@
+﻿<Window x:Class="QuotaBar.Win.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:QuotaBar.Win"
+        xmlns:views="clr-namespace:QuotaBar.Win.Views"
+        mc:Ignorable="d"
+        Title="Quota Bar"
+        Width="320"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        SizeToContent="Height"
+        ResizeMode="NoResize">
+    <Border Background="#FF2D2D2D"
+            CornerRadius="12"
+            Padding="16"
+            BorderBrush="#FF3D3D3D"
+            BorderThickness="1">
+        <StackPanel>
+            <!-- Close Button (top right) -->
+            <Button Content="✕"
+                    Foreground="White"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    FontSize="14"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Top"
+                    Padding="4"
+                    Click="CloseButton_Click"
+                    Cursor="Hand"
+                    Margin="0,-8,-8,0"/>
+
+            <!-- Header -->
+            <Grid Margin="0,0,0,8">
+                <TextBlock Text="Quota Bar"
+                           Foreground="White"
+                           FontSize="14"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+                <Button Content="🔄"
+                        HorizontalAlignment="Right"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        Foreground="White"
+                        FontSize="14"
+                        Click="Refresh_Click"
+                        Cursor="Hand"/>
+            </Grid>
+
+            <!-- Content Cards -->
+            <ScrollViewer MaxHeight="400"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel x:Name="CardsPanel"/>
+            </ScrollViewer>
+
+            <!-- Footer -->
+            <StackPanel Orientation="Horizontal"
+                        HorizontalAlignment="Center"
+                        Margin="0,8,0,0">
+                <Button Content="Settings..."
+                        Style="{StaticResource FooterButtonStyle}"
+                        Click="Settings_Click"/>
+                <Button Content="Check for Updates"
+                        Style="{StaticResource FooterButtonStyle}"
+                        Click="Updates_Click"
+                        Margin="8,0"/>
+                <Button Content="Quit"
+                        Style="{StaticResource FooterButtonStyle}"
+                        Click="Quit_Click"/>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
