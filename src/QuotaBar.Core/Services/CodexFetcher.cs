@@ -174,6 +174,14 @@ public class CodexFetcher : IUsageFetcher
                     token = at.GetString();
                 if (tokens.TryGetProperty("account_id", out var ai))
                     accountId = ai.GetString();
+
+                // Fallback: tokens.id_token.chatgpt_account_id
+                if (string.IsNullOrWhiteSpace(accountId) &&
+                    tokens.TryGetProperty("id_token", out var idToken))
+                {
+                    if (idToken.TryGetProperty("chatgpt_account_id", out var cai))
+                        accountId = cai.GetString();
+                }
             }
 
             return (token, accountId);

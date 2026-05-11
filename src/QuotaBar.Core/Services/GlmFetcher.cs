@@ -17,7 +17,7 @@ public class GlmFetcher : IUsageFetcher
 
         var baseUrl = settings.GlmPlatform == GLMPlatform.Zai
             ? "https://api.z.ai"
-            : "https://bigmodel.cn";
+            : "https://open.bigmodel.cn";
 
         var request = new HttpRequestMessage(
             HttpMethod.Get,
@@ -45,6 +45,9 @@ public class GlmFetcher : IUsageFetcher
             }
         }
 
+        if (entries.Count == 0)
+            throw new InvalidOperationException("GLM: no quota entries found in response.");
+
         return entries;
     }
 
@@ -54,30 +57,30 @@ public class GlmFetcher : IUsageFetcher
         {
             string? type = null;
             int? unit = null;
-            long number = 0;
+            long usage = 0;        // total limit
+            long currentValue = 0; // consumed
+            long remaining = 0;    // left
             int percentage = 0;
             long nextResetTime = 0;
-            long currentValue = 0;
-            long remaining = 0;
 
             if (item.TryGetProperty("type", out var t))
                 type = t.GetString();
             if (item.TryGetProperty("unit", out var u))
                 unit = u.GetInt32();
-            if (item.TryGetProperty("number", out var n))
-                number = n.GetInt64();
-            if (item.TryGetProperty("percentage", out var p))
-                percentage = p.GetInt32();
-            if (item.TryGetProperty("nextResetTime", out var rt))
-                nextResetTime = rt.GetInt64();
+            if (item.TryGetProperty("usage", out var us))
+                usage = us.GetInt64();
             if (item.TryGetProperty("currentValue", out var cv))
                 currentValue = cv.GetInt64();
             if (item.TryGetProperty("remaining", out var rem))
                 remaining = rem.GetInt64();
+            if (item.TryGetProperty("percentage", out var p))
+                percentage = p.GetInt32();
+            if (item.TryGetProperty("nextResetTime", out var rt))
+                nextResetTime = rt.GetInt64();
 
             var name = MapGlmName(type, unit);
-            // total = number if available, otherwise currentValue + remaining
-            var total = number > 0 ? number : currentValue + remaining;
+            // usage = total limit, currentValue = consumed, remaining = left
+            var total = usage > 0 ? usage : currentValue + remaining;
             var percent = total > 0 ? (double)currentValue / total : percentage / 100.0;
             var resetSeconds = nextResetTime > 0
                 ? (int)((nextResetTime - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()) / 1000)
