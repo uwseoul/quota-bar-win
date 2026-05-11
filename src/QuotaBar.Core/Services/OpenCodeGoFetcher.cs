@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using QuotaBar.Core.Models;
 
@@ -16,9 +16,12 @@ public class OpenCodeGoFetcher : IUsageFetcher
             string.IsNullOrWhiteSpace(settings.OpenCodeGoAuthCookie))
             throw new InvalidOperationException("OpenCode Go Workspace ID and Auth Cookie are not configured.");
 
-        _client.DefaultRequestHeaders.Add("Cookie", $"auth={settings.OpenCodeGoAuthCookie.Trim()}");
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"https://opencode.ai/workspace/{settings.OpenCodeGoWorkspaceId.Trim()}/go");
+        request.Headers.Add("Cookie", $"auth={settings.OpenCodeGoAuthCookie.Trim()}");
 
-        var response = await _client.GetAsync($"https://opencode.ai/workspace/{settings.OpenCodeGoWorkspaceId.Trim()}/go");
+        var response = await _client.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var html = await response.Content.ReadAsStringAsync();
@@ -72,6 +75,9 @@ public class OpenCodeGoFetcher : IUsageFetcher
             });
         }
 
+        if (entries.Count == 0)
+            throw new InvalidOperationException("Could not parse OpenCode Go usage data from HTML response.");
+
         return entries;
     }
 
@@ -79,14 +85,26 @@ public class OpenCodeGoFetcher : IUsageFetcher
     {
         try
         {
-            var pattern = $"{label}\\s*:\\s*(?:\\$R\\[\\d+\\]\\s*=\\s*)?\\{{\\s*status:\\s*\"[^\"]+\",\\s*resetInSec:\\s*(\\d+),\\s*usagePercent:\\s*(\\d+)\\s*\\}}";
-            var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase);
+            // More robust regex: allows any field order and optional whitespace
+            var pattern = $"{label}\\s*:\\s*(?:\\$R\\[\\d+\\]\\s*=\\s*)?\\{{[^}}]*?status\\s*:\\s*\"[^\"]+\"[^}}]*?resetInSec\\s*:\\s*(\\d+)[^}}]*?usagePercent\\s*:\\s*(\\d+)[^}}]*?\\}}";
+            var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
             if (match.Success)
             {
                 var resetSec = int.Parse(match.Groups[1].Value);
                 var percent = int.Parse(match.Groups[2].Value);
                 return (percent, resetSec);
             }
+
+            // Try alternative field order
+            pattern = $"{label}\\s*:\\s*(?:\\$R\\[\\d+\\]\\s*=\\s*)?\\{{[^}}]*?usagePercent\\s*:\\s*(\\d+)[^}}]*?resetInSec\\s*:\\s*(\\d+)[^}}]*?\\}}";
+            match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (match.Success)
+            {
+                var percent = int.Parse(match.Groups[1].Value);
+                var resetSec = int.Parse(match.Groups[2].Value);
+                return (percent, resetSec);
+            }
+
             return null;
         }
         catch

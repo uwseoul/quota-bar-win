@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using QuotaBar.Core.Models;
 
 namespace QuotaBar.Core.Services;
@@ -18,63 +19,49 @@ public class UsageService : IUsageService
     public async Task<Dictionary<string, PlatformResult>> FetchAllAsync()
     {
         var settings = _settingsService.Load();
-        var results = new Dictionary<string, PlatformResult>();
+        var results = new ConcurrentDictionary<string, PlatformResult>();
 
-        var tasks = new List<Task>();
-        var semaphore = new SemaphoreSlim(4, 4);
-
-        foreach (var fetcher in _fetchers)
+        var tasks = _fetchers.Select(async fetcher =>
         {
-            tasks.Add(Task.Run(async () =>
+            var isEnabled = fetcher.PlatformId switch
             {
-                await semaphore.WaitAsync();
-                try
-                {
-                    var isEnabled = fetcher.PlatformId switch
-                    {
-                        "glm" => settings.GlmEnabled,
-                        "minimax" => settings.MiniMaxEnabled,
-                        "codex" => settings.CodexEnabled,
-                        "opencodego" => settings.OpenCodeGoEnabled,
-                        _ => true
-                    };
+                "glm" => settings.GlmEnabled,
+                "minimax" => settings.MiniMaxEnabled,
+                "codex" => settings.CodexEnabled,
+                "opencodego" => settings.OpenCodeGoEnabled,
+                _ => true
+            };
 
-                    if (!isEnabled)
-                    {
-                        results[fetcher.PlatformId] = new PlatformResult
-                        {
-                            Entries = new List<QuotaEntry>(),
-                            Error = "Disabled"
-                        };
-                        return;
-                    }
-
-                    try
-                    {
-                        var entries = await fetcher.FetchAsync(settings);
-                        results[fetcher.PlatformId] = new PlatformResult
-                        {
-                            Entries = entries,
-                            Error = null
-                        };
-                    }
-                    catch (Exception ex)
-                    {
-                        results[fetcher.PlatformId] = new PlatformResult
-                        {
-                            Entries = new List<QuotaEntry>(),
-                            Error = ex.Message
-                        };
-                    }
-                }
-                finally
+            if (!isEnabled)
+            {
+                results[fetcher.PlatformId] = new PlatformResult
                 {
-                    semaphore.Release();
-                }
-            }));
-        }
+                    Entries = new List<QuotaEntry>(),
+                    Error = "Disabled"
+                };
+                return;
+            }
+
+            try
+            {
+                var entries = await fetcher.FetchAsync(settings);
+                results[fetcher.PlatformId] = new PlatformResult
+                {
+                    Entries = entries,
+                    Error = null
+                };
+            }
+            catch (Exception ex)
+            {
+                results[fetcher.PlatformId] = new PlatformResult
+                {
+                    Entries = new List<QuotaEntry>(),
+                    Error = ex.Message
+                };
+            }
+        }).ToArray();
 
         await Task.WhenAll(tasks);
-        return results;
+        return new Dictionary<string, PlatformResult>(results);
     }
 }

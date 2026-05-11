@@ -15,13 +15,18 @@ public class CodexFetcher : IUsageFetcher
         var (token, accountId) = ReadAuth();
         if (string.IsNullOrWhiteSpace(token))
             throw new InvalidOperationException("Codex auth token not found in ~/.codex/auth.json");
+        if (string.IsNullOrWhiteSpace(accountId))
+            throw new InvalidOperationException("Codex account_id not found in ~/.codex/auth.json");
 
-        _client.DefaultRequestHeaders.Authorization =
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            "https://chatgpt.com/backend-api/wham/usage");
+        request.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", token.Trim());
-        _client.DefaultRequestHeaders.Add("ChatGPT-Account-Id", accountId?.Trim() ?? "");
-        _client.DefaultRequestHeaders.Add("Accept", "application/json");
+        request.Headers.Add("ChatGPT-Account-Id", accountId.Trim());
+        request.Headers.Add("Accept", "application/json");
 
-        var response = await _client.GetAsync("https://chatgpt.com/backend-api/wham/usage");
+        var response = await _client.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
@@ -59,12 +64,15 @@ public class CodexFetcher : IUsageFetcher
     {
         try
         {
-            int usedPercent = 0;
+            double usedPercent = 0;
             long resetAt = 0;
             int limitWindowSeconds = 0;
 
             if (elem.TryGetProperty("used_percent", out var up))
-                usedPercent = up.GetInt32();
+            {
+                if (up.ValueKind == JsonValueKind.Number)
+                    usedPercent = up.GetDouble();
+            }
             if (elem.TryGetProperty("reset_at", out var ra))
                 resetAt = ra.GetInt64();
             if (elem.TryGetProperty("limit_window_seconds", out var lws))
@@ -79,7 +87,7 @@ public class CodexFetcher : IUsageFetcher
                 PlatformId = "codex",
                 Name = name,
                 UsagePercent = percent,
-                Usage = null, // Codex only gives percentage
+                Usage = null,
                 Total = null,
                 ResetSeconds = Math.Max(0, resetSeconds),
                 TotalDurationSeconds = limitWindowSeconds > 0 ? limitWindowSeconds : totalDuration

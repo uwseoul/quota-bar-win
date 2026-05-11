@@ -19,10 +19,13 @@ public class GlmFetcher : IUsageFetcher
             ? "https://api.z.ai"
             : "https://bigmodel.cn";
 
-        _client.DefaultRequestHeaders.Authorization =
+        var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{baseUrl}/api/monitor/usage/quota/limit");
+        request.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", settings.GlmApiKey.Trim());
 
-        var response = await _client.GetAsync($"{baseUrl}/api/monitor/usage/quota/limit");
+        var response = await _client.SendAsync(request);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync();
@@ -54,7 +57,7 @@ public class GlmFetcher : IUsageFetcher
             long number = 0;
             int percentage = 0;
             long nextResetTime = 0;
-            long usage = 0;
+            long currentValue = 0;
             long remaining = 0;
 
             if (item.TryGetProperty("type", out var t))
@@ -67,24 +70,27 @@ public class GlmFetcher : IUsageFetcher
                 percentage = p.GetInt32();
             if (item.TryGetProperty("nextResetTime", out var rt))
                 nextResetTime = rt.GetInt64();
-            if (item.TryGetProperty("usage", out var us))
-                usage = us.GetInt64();
+            if (item.TryGetProperty("currentValue", out var cv))
+                currentValue = cv.GetInt64();
             if (item.TryGetProperty("remaining", out var rem))
                 remaining = rem.GetInt64();
 
             var name = MapGlmName(type, unit);
-            var total = number > 0 ? number : usage + remaining;
-            var percent = total > 0 ? (double)usage / total : percentage / 100.0;
-            var resetSeconds = (int)((nextResetTime - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()) / 1000);
+            // total = number if available, otherwise currentValue + remaining
+            var total = number > 0 ? number : currentValue + remaining;
+            var percent = total > 0 ? (double)currentValue / total : percentage / 100.0;
+            var resetSeconds = nextResetTime > 0
+                ? (int)((nextResetTime - DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()) / 1000)
+                : 0;
             var totalDuration = GetGlmDuration(type, unit);
 
             return new QuotaEntry
             {
-                Id = $"glm-{type}-{unit}-{number}",
+                Id = $"glm-{type}-{unit}",
                 PlatformId = "glm",
                 Name = name,
                 UsagePercent = percent,
-                Usage = usage,
+                Usage = currentValue,
                 Total = total,
                 ResetSeconds = Math.Max(0, resetSeconds),
                 TotalDurationSeconds = totalDuration
