@@ -39,7 +39,8 @@ public class MiniMaxFetcher : IUsageFetcher
 
                 var json = await response.Content.ReadAsStringAsync();
                 var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("model_remains", out var modelRemains))
+                if (doc.RootElement.TryGetProperty("model_remains", out var modelRemains) &&
+                    modelRemains.ValueKind == JsonValueKind.Array)
                 {
                     foreach (var model in modelRemains.EnumerateArray())
                     {

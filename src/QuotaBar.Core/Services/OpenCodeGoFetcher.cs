@@ -85,23 +85,22 @@ public class OpenCodeGoFetcher : IUsageFetcher
     {
         try
         {
-            // More robust regex: allows any field order and optional whitespace
-            var pattern = $"{label}\\s*:\\s*(?:\\$R\\[\\d+\\]\\s*=\\s*)?\\{{[^}}]*?status\\s*:\\s*\"[^\"]+\"[^}}]*?resetInSec\\s*:\\s*(\\d+)[^}}]*?usagePercent\\s*:\\s*(\\d+)[^}}]*?\\}}";
-            var match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            if (match.Success)
-            {
-                var resetSec = int.Parse(match.Groups[1].Value);
-                var percent = int.Parse(match.Groups[2].Value);
-                return (percent, resetSec);
-            }
+            // Extract the block: label: { ... }
+            var blockPattern = $"{label}\\s*:\\s*(?:\\$R\\[\\d+\\]\\s*=\\s*)?\\{{([^}}]+)\\}}";
+            var blockMatch = Regex.Match(html, blockPattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
+            if (!blockMatch.Success)
+                return null;
 
-            // Try alternative field order
-            pattern = $"{label}\\s*:\\s*(?:\\$R\\[\\d+\\]\\s*=\\s*)?\\{{[^}}]*?usagePercent\\s*:\\s*(\\d+)[^}}]*?resetInSec\\s*:\\s*(\\d+)[^}}]*?\\}}";
-            match = Regex.Match(html, pattern, RegexOptions.IgnoreCase | RegexOptions.Singleline);
-            if (match.Success)
+            var block = blockMatch.Groups[1].Value;
+
+            // Order-independent extraction of resetInSec and usagePercent
+            var resetMatch = Regex.Match(block, @"resetInSec\s*:\s*(\d+)");
+            var percentMatch = Regex.Match(block, @"usagePercent\s*:\s*(\d+)");
+
+            if (resetMatch.Success && percentMatch.Success)
             {
-                var percent = int.Parse(match.Groups[1].Value);
-                var resetSec = int.Parse(match.Groups[2].Value);
+                var resetSec = int.Parse(resetMatch.Groups[1].Value);
+                var percent = int.Parse(percentMatch.Groups[1].Value);
                 return (percent, resetSec);
             }
 
