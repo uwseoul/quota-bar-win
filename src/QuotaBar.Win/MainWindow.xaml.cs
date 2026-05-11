@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System.Collections.Generic;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using QuotaBar.Core.Models;
@@ -11,7 +12,7 @@ namespace QuotaBar.Win;
 
 public partial class MainWindow : Window
 {
-    private readonly MockUsageService _usageService = new();
+    private readonly UsageService _usageService = new();
     private readonly SettingsService _settingsService = new();
     private readonly DispatcherTimer _refreshTimer;
 
@@ -44,6 +45,25 @@ public partial class MainWindow : Window
                     PlatformName = kvp.Key.ToUpperInvariant(),
                     Entries = kvp.Value.Entries
                 };
+
+                if (!string.IsNullOrEmpty(kvp.Value.Error))
+                {
+                    card.Entries = new List<QuotaEntry>
+                    {
+                        new()
+                        {
+                            Id = $"{kvp.Key}-error",
+                            PlatformId = kvp.Key,
+                            Name = kvp.Value.Error,
+                            UsagePercent = 0,
+                            Usage = null,
+                            Total = null,
+                            ResetSeconds = null,
+                            TotalDurationSeconds = null
+                        }
+                    };
+                }
+
                 CardsPanel.Children.Add(card);
             }
         }

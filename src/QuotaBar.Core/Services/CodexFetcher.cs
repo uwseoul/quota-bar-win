@@ -1,0 +1,127 @@
+using System.Net.Http.Headers;
+using System.Text.Json;
+using QuotaBar.Core.Models;
+
+namespace QuotaBar.Core.Services;
+
+public class CodexFetcher : IUsageFetcher
+{
+    public string PlatformId => "codex";
+
+    private readonly HttpClient _client = new();
+
+    public async Task<List<QuotaEntry>> FetchAsync(AppSettings settings)
+    {
+        var (token, accountId) = ReadAuth();
+        if (string.IsNullOrWhiteSpace(token))
+            throw new InvalidOperationException("Codex auth token not found in ~/.codex/auth.json");
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token.Trim());
+        _client.DefaultRequestHeaders.Add("ChatGPT-Account-Id", accountId?.Trim() ?? "");
+        _client.DefaultRequestHeaders.Add("Accept", "application/json");
+
+        var response = await _client.GetAsync("https://chatgpt.com/backend-api/wham/usage");
+        response.EnsureSuccessStatusCode();
+
+        var json = await response.Content.ReadAsStringAsync();
+        var doc = JsonDocument.Parse(json);
+
+        var entries = new List<QuotaEntry>();
+
+        if (doc.RootElement.TryGetProperty("rate_limit", out var rateLimit))
+        {
+            if (rateLimit.TryGetProperty("primary_window", out var primary))
+            {
+                var entry = ParseWindow(primary, "5H", 18000);
+                if (entry != null) entries.Add(entry);
+            }
+            if (rateLimit.TryGetProperty("secondary_window", out var secondary))
+            {
+                var entry = ParseWindow(secondary, "7D", 604800);
+                if (entry != null) entries.Add(entry);
+            }
+        }
+
+        if (doc.RootElement.TryGetProperty("code_review_rate_limit", out var reviewLimit))
+        {
+            if (reviewLimit.TryGetProperty("primary_window", out var reviewWindow))
+            {
+                var entry = ParseWindow(reviewWindow, "Review", 604800);
+                if (entry != null) entries.Add(entry);
+            }
+        }
+
+        return entries;
+    }
+
+    private QuotaEntry? ParseWindow(JsonElement elem, string name, int totalDuration)
+    {
+        try
+        {
+            int usedPercent = 0;
+            long resetAt = 0;
+            int limitWindowSeconds = 0;
+
+            if (elem.TryGetProperty("used_percent", out var up))
+                usedPercent = up.GetInt32();
+            if (elem.TryGetProperty("reset_at", out var ra))
+                resetAt = ra.GetInt64();
+            if (elem.TryGetProperty("limit_window_seconds", out var lws))
+                limitWindowSeconds = lws.GetInt32();
+
+            var resetSeconds = (int)(resetAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            var percent = usedPercent / 100.0;
+
+            return new QuotaEntry
+            {
+                Id = $"codex-{name.ToLowerInvariant()}",
+                PlatformId = "codex",
+                Name = name,
+                UsagePercent = percent,
+                Usage = null, // Codex only gives percentage
+                Total = null,
+                ResetSeconds = Math.Max(0, resetSeconds),
+                TotalDurationSeconds = limitWindowSeconds > 0 ? limitWindowSeconds : totalDuration
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static (string? Token, string? AccountId) ReadAuth()
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                ".codex", "auth.json"
+            );
+
+            if (!File.Exists(path))
+                return (null, null);
+
+            var json = File.ReadAllText(path);
+            var doc = JsonDocument.Parse(json);
+
+            string? token = null;
+            string? accountId = null;
+
+            if (doc.RootElement.TryGetProperty("tokens", out var tokens))
+            {
+                if (tokens.TryGetProperty("access_token", out var at))
+                    token = at.GetString();
+                if (tokens.TryGetProperty("account_id", out var ai))
+                    accountId = ai.GetString();
+            }
+
+            return (token, accountId);
+        }
+        catch
+        {
+            return (null, null);
+        }
+    }
+}
