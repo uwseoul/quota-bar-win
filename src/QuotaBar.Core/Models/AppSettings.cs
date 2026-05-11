@@ -7,6 +7,8 @@ public class AppSettings
     public string MiniMaxApiKey { get; set; } = string.Empty;
     public string OpenCodeGoWorkspaceId { get; set; } = string.Empty;
     public string OpenCodeGoAuthCookie { get; set; } = string.Empty;
+    public string CodexAuthToken { get; set; } = string.Empty;
+    public string CodexAccountId { get; set; } = string.Empty;
 
     public bool GlmEnabled { get; set; } = true;
     public bool MiniMaxEnabled { get; set; } = true;

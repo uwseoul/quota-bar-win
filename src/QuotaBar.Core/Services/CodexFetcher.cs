@@ -12,11 +12,11 @@ public class CodexFetcher : IUsageFetcher
 
     public async Task<List<QuotaEntry>> FetchAsync(AppSettings settings)
     {
-        var (token, accountId) = ReadAuth();
+        var (token, accountId) = ReadAuth(settings);
         if (string.IsNullOrWhiteSpace(token))
-            throw new InvalidOperationException("Codex auth token not found in ~/.codex/auth.json");
+            throw new InvalidOperationException("Codex auth token not found. Configure in Settings or ensure ~/.codex/auth.json exists.");
         if (string.IsNullOrWhiteSpace(accountId))
-            throw new InvalidOperationException("Codex account_id not found in ~/.codex/auth.json");
+            throw new InvalidOperationException("Codex account_id not found. Configure in Settings or ensure ~/.codex/auth.json exists.");
 
         var request = new HttpRequestMessage(
             HttpMethod.Get,
@@ -34,21 +34,67 @@ public class CodexFetcher : IUsageFetcher
 
         var entries = new List<QuotaEntry>();
 
-        if (doc.RootElement.TryGetProperty("rate_limit", out var rateLimit))
+        // Try multiple known schemas
+        TryParseRateLimit(doc.RootElement, entries);
+        TryParseRateLimits(doc.RootElement, entries);
+        TryParseNamedLimits(doc.RootElement, entries);
+
+        if (entries.Count == 0)
+            throw new InvalidOperationException("Could not parse Codex usage data. Response schema may have changed.");
+
+        return entries;
+    }
+
+    private void TryParseRateLimit(JsonElement root, List<QuotaEntry> entries)
+    {
+        if (!root.TryGetProperty("rate_limit", out var rateLimit))
+            return;
+
+        if (rateLimit.TryGetProperty("primary_window", out var primary))
         {
-            if (rateLimit.TryGetProperty("primary_window", out var primary))
-            {
-                var entry = ParseWindow(primary, "5H", 18000);
-                if (entry != null) entries.Add(entry);
-            }
-            if (rateLimit.TryGetProperty("secondary_window", out var secondary))
-            {
-                var entry = ParseWindow(secondary, "7D", 604800);
-                if (entry != null) entries.Add(entry);
-            }
+            var entry = ParseWindow(primary, "5H", 18000);
+            if (entry != null) entries.Add(entry);
+        }
+        if (rateLimit.TryGetProperty("secondary_window", out var secondary))
+        {
+            var entry = ParseWindow(secondary, "7D", 604800);
+            if (entry != null) entries.Add(entry);
+        }
+    }
+
+    private void TryParseRateLimits(JsonElement root, List<QuotaEntry> entries)
+    {
+        if (!root.TryGetProperty("rate_limits", out var rateLimits))
+            return;
+
+        if (rateLimits.TryGetProperty("five_hour_limit", out var fiveH))
+        {
+            var entry = ParseWindow(fiveH, "5H", 18000);
+            if (entry != null) entries.Add(entry);
+        }
+        if (rateLimits.TryGetProperty("weekly_limit", out var weekly))
+        {
+            var entry = ParseWindow(weekly, "7D", 604800);
+            if (entry != null) entries.Add(entry);
+        }
+    }
+
+    private void TryParseNamedLimits(JsonElement root, List<QuotaEntry> entries)
+    {
+        // Direct window properties at root level
+        if (root.TryGetProperty("primary_window", out var primary))
+        {
+            var entry = ParseWindow(primary, "5H", 18000);
+            if (entry != null) entries.Add(entry);
+        }
+        if (root.TryGetProperty("secondary_window", out var secondary))
+        {
+            var entry = ParseWindow(secondary, "7D", 604800);
+            if (entry != null) entries.Add(entry);
         }
 
-        if (doc.RootElement.TryGetProperty("code_review_rate_limit", out var reviewLimit))
+        // Code review limit
+        if (root.TryGetProperty("code_review_rate_limit", out var reviewLimit))
         {
             if (reviewLimit.TryGetProperty("primary_window", out var reviewWindow))
             {
@@ -56,8 +102,6 @@ public class CodexFetcher : IUsageFetcher
                 if (entry != null) entries.Add(entry);
             }
         }
-
-        return entries;
     }
 
     private QuotaEntry? ParseWindow(JsonElement elem, string name, int totalDuration)
@@ -99,8 +143,15 @@ public class CodexFetcher : IUsageFetcher
         }
     }
 
-    private static (string? Token, string? AccountId) ReadAuth()
+    private static (string? Token, string? AccountId) ReadAuth(AppSettings settings)
     {
+        // Use settings values if provided (override auth.json)
+        if (!string.IsNullOrWhiteSpace(settings.CodexAuthToken) &&
+            !string.IsNullOrWhiteSpace(settings.CodexAccountId))
+        {
+            return (settings.CodexAuthToken, settings.CodexAccountId);
+        }
+
         try
         {
             var path = Path.Combine(

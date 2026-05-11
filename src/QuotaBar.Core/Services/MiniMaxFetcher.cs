@@ -55,6 +55,9 @@ public class MiniMaxFetcher : IUsageFetcher
             catch { /* ignore partial failure per endpoint */ }
         }
 
+        if (entries.Count == 0)
+            throw new InvalidOperationException("MiniMax: both endpoints failed or returned no usable quota data.");
+
         return entries;
     }
 

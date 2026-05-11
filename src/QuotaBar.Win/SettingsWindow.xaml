@@ -105,10 +105,30 @@
                              Padding="4"
                              FontSize="11"/>
 
-                    <TextBlock Text="Codex reads ~/.codex/auth.json"
+                    <TextBlock Text="Codex (optional, overrides ~/.codex/auth.json)"
                                Foreground="#99FFFFFF"
                                FontSize="10"
-                               Margin="0,6,0,0"/>
+                               Margin="0,6,0,2"/>
+                    <TextBlock Text="Codex Auth Token"
+                               Foreground="White"
+                               FontSize="11"
+                               Margin="0,2"/>
+                    <TextBox x:Name="CodexTokenBox"
+                             Background="#FF1A1A1A"
+                             Foreground="White"
+                             BorderBrush="#FF3D3D3D"
+                             Padding="4"
+                             FontSize="11"/>
+                    <TextBlock Text="Codex Account ID"
+                               Foreground="White"
+                               FontSize="11"
+                               Margin="0,4,0,2"/>
+                    <TextBox x:Name="CodexAccountIdBox"
+                             Background="#FF1A1A1A"
+                             Foreground="White"
+                             BorderBrush="#FF3D3D3D"
+                             Padding="4"
+                             FontSize="11"/>
 
                     <!-- Platforms -->
                     <TextBlock Text="Platforms"

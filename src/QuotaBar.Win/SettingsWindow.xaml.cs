@@ -27,6 +27,8 @@ public partial class SettingsWindow : Window
         MiniMaxApiKeyBox.Text = _settings.MiniMaxApiKey;
         OpenCodeGoWorkspaceBox.Text = _settings.OpenCodeGoWorkspaceId;
         OpenCodeGoCookieBox.Text = _settings.OpenCodeGoAuthCookie;
+        CodexTokenBox.Text = _settings.CodexAuthToken;
+        CodexAccountIdBox.Text = _settings.CodexAccountId;
 
         // Platforms
         GlmCheck.IsChecked = _settings.GlmEnabled;
@@ -67,6 +69,8 @@ public partial class SettingsWindow : Window
         _settings.MiniMaxApiKey = MiniMaxApiKeyBox.Text;
         _settings.OpenCodeGoWorkspaceId = OpenCodeGoWorkspaceBox.Text;
         _settings.OpenCodeGoAuthCookie = OpenCodeGoCookieBox.Text;
+        _settings.CodexAuthToken = CodexTokenBox.Text;
+        _settings.CodexAccountId = CodexAccountIdBox.Text;
         _settings.GlmEnabled = GlmCheck.IsChecked == true;
         _settings.MiniMaxEnabled = MiniMaxCheck.IsChecked == true;
         _settings.CodexEnabled = CodexCheck.IsChecked == true;
