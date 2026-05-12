@@ -38,7 +38,7 @@
                        Margin="0,0,0,12"/>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          MaxHeight="410">
+                          MaxHeight="340">
                 <StackPanel Margin="0,0,0,16">
                     <!-- Account API -->
                     <TextBlock Text="Account API"
@@ -185,6 +185,23 @@
                               Foreground="White"
                               BorderBrush="#FF3D3D3D"
                               Margin="0,2"/>
+
+                    <!-- Refresh Interval -->
+                    <TextBlock Text="Refresh"
+                               Foreground="#99FFFFFF"
+                               FontSize="10"
+                               FontWeight="Bold"
+                               Margin="0,12,0,4"/>
+                    <TextBlock Text="Refresh Interval (seconds)"
+                               Foreground="White"
+                               FontSize="11"
+                               Margin="0,2"/>
+                    <TextBox x:Name="RefreshIntervalBox"
+                             Background="#FF1A1A1A"
+                             Foreground="White"
+                             BorderBrush="#FF3D3D3D"
+                             Padding="4"
+                             FontSize="11"/>
 
                     <!-- Launch at Login -->
                     <TextBlock Text="System"

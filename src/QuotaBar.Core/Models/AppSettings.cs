@@ -23,4 +23,6 @@ public class AppSettings
     public bool AlwaysOnTop { get; set; } = true;
     public string Theme { get; set; } = "Auto"; // Auto, Light, Dark
     public bool LaunchAtLogin { get; set; } = false;
+
+    public int RefreshIntervalSeconds { get; set; } = 300;
 }

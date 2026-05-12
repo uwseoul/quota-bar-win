@@ -93,8 +93,9 @@ public class CodexFetcher : IUsageFetcher
             if (entry != null) entries.Add(entry);
         }
 
-        // Code review limit
-        if (root.TryGetProperty("code_review_rate_limit", out var reviewLimit))
+        // Code review limit (skip if null)
+        if (root.TryGetProperty("code_review_rate_limit", out var reviewLimit) &&
+            reviewLimit.ValueKind != JsonValueKind.Null)
         {
             if (reviewLimit.TryGetProperty("primary_window", out var reviewWindow))
             {
@@ -110,6 +111,7 @@ public class CodexFetcher : IUsageFetcher
         {
             double usedPercent = 0;
             long resetAt = 0;
+            int resetAfterSeconds = 0;
             int limitWindowSeconds = 0;
 
             if (elem.TryGetProperty("used_percent", out var up))
@@ -119,10 +121,17 @@ public class CodexFetcher : IUsageFetcher
             }
             if (elem.TryGetProperty("reset_at", out var ra))
                 resetAt = ra.GetInt64();
+            if (elem.TryGetProperty("reset_after_seconds", out var ras))
+                resetAfterSeconds = ras.GetInt32();
             if (elem.TryGetProperty("limit_window_seconds", out var lws))
                 limitWindowSeconds = lws.GetInt32();
 
-            var resetSeconds = (int)(resetAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            int? resetSeconds = null;
+            if (resetAt > 0)
+                resetSeconds = (int)(resetAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
+            else if (resetAfterSeconds > 0)
+                resetSeconds = resetAfterSeconds;
+
             var percent = usedPercent / 100.0;
 
             return new QuotaEntry
@@ -133,7 +142,7 @@ public class CodexFetcher : IUsageFetcher
                 UsagePercent = percent,
                 Usage = null,
                 Total = null,
-                ResetSeconds = Math.Max(0, resetSeconds),
+                ResetSeconds = resetSeconds,
                 TotalDurationSeconds = limitWindowSeconds > 0 ? limitWindowSeconds : totalDuration
             };
         }

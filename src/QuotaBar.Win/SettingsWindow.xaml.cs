@@ -51,6 +51,9 @@ public partial class SettingsWindow : Window
         ThemeCombo.ItemsSource = new[] { "Auto", "Light", "Dark" };
         ThemeCombo.SelectedItem = _settings.Theme;
 
+        // Refresh Interval
+        RefreshIntervalBox.Text = _settings.RefreshIntervalSeconds.ToString();
+
         // Launch at Login
         LaunchAtLoginCheck.IsChecked = _settings.LaunchAtLogin;
     }
@@ -85,6 +88,9 @@ public partial class SettingsWindow : Window
         _settings.AlwaysOnTop = AlwaysOnTopCheck.IsChecked == true;
         _settings.Theme = ThemeCombo.SelectedItem?.ToString() ?? "Auto";
         _settings.LaunchAtLogin = LaunchAtLoginCheck.IsChecked == true;
+
+        if (int.TryParse(RefreshIntervalBox.Text, out var interval) && interval >= 10)
+            _settings.RefreshIntervalSeconds = interval;
 
         _settingsService.Save(_settings);
         Close();

@@ -1,0 +1,51 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore src/QuotaBar.sln
+
+      - name: Build Release
+        run: dotnet build src/QuotaBar.sln --configuration Release --no-restore
+
+      - name: Publish self-contained single-file
+        run: |
+          dotnet publish src/QuotaBar.Win/QuotaBar.Win.csproj `
+            --configuration Release `
+            --runtime win-x64 `
+            --self-contained true `
+            --output ./publish `
+            /p:PublishSingleFile=true `
+            /p:IncludeNativeLibrariesForSelfExtract=true `
+            /p:DebugType=None `
+            /p:DebugSymbols=false
+
+      - name: Create ZIP
+        run: Compress-Archive -Path ./publish/* -DestinationPath ./QuotaBar.Win.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: QuotaBar.Win.zip
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

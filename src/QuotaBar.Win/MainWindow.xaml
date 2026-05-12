@@ -14,11 +14,17 @@
         Topmost="True"
         SizeToContent="Height"
         ResizeMode="NoResize">
-    <Border Background="#FF2D2D2D"
-            CornerRadius="12"
+    <Border CornerRadius="12"
             Padding="16"
             BorderBrush="#FF3D3D3D"
             BorderThickness="1">
+        <Border.Background>
+            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                <GradientStop Color="#FF1A1A2E" Offset="0"/>
+                <GradientStop Color="#FF16213E" Offset="0.5"/>
+                <GradientStop Color="#FF0F3460" Offset="1"/>
+            </LinearGradientBrush>
+        </Border.Background>
         <StackPanel>
             <!-- Close Button (top right) -->
             <Button Content="✕"
@@ -40,22 +46,99 @@
                            FontSize="14"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
-                <Button Content="🔄"
-                        HorizontalAlignment="Right"
-                        Background="Transparent"
-                        BorderThickness="0"
-                        Foreground="White"
-                        FontSize="14"
-                        Click="Refresh_Click"
-                        Cursor="Hand"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <ToggleButton x:Name="SimpleModeToggle"
+                                  Content="🚥"
+                                  Foreground="White"
+                                  FontSize="12"
+                                  Padding="4,2"
+                                  Click="ToggleMode_Click"
+                                  Cursor="Hand"
+                                  ToolTip="Toggle Simple Mode"
+                                  Margin="0,0,8,0">
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="BorderBrush" Value="#FF3D3D3D"/>
+                                <Setter Property="BorderThickness" Value="1"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="ToggleButton">
+                                            <Border Background="{TemplateBinding Background}"
+                                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                                    BorderThickness="{TemplateBinding BorderThickness}"
+                                                    CornerRadius="4"
+                                                    Padding="{TemplateBinding Padding}">
+                                                <ContentPresenter HorizontalAlignment="Center"
+                                                                  VerticalAlignment="Center"/>
+                                            </Border>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <Trigger Property="IsChecked" Value="True">
+                                        <Setter Property="Background" Value="#FF007AFF"/>
+                                        <Setter Property="BorderBrush" Value="#FF007AFF"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#33FFFFFF"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+                    <Button Content="🔄"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="White"
+                            FontSize="14"
+                            Click="Refresh_Click"
+                            Cursor="Hand"/>
+                </StackPanel>
             </Grid>
 
-            <!-- Content Cards -->
-            <ScrollViewer MaxHeight="400"
+            <!-- Content Cards (Detail Mode) -->
+            <ScrollViewer x:Name="DetailScroll"
+                          MaxHeight="400"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="CardsPanel"/>
             </ScrollViewer>
+
+            <!-- Simple Mode Panel -->
+            <StackPanel x:Name="SimplePanel"
+                        Visibility="Collapsed">
+                <ItemsControl x:Name="SimpleItems">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,3">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Ellipse Grid.Column="0"
+                                         Width="10"
+                                         Height="10"
+                                         Fill="{Binding Color}"
+                                         VerticalAlignment="Center"
+                                         Margin="0,0,8,0"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Platform}"
+                                           Foreground="White"
+                                           FontSize="12"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding PercentText}"
+                                           Foreground="White"
+                                           FontSize="12"
+                                           FontWeight="Medium"
+                                           VerticalAlignment="Center"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
 
             <!-- Footer -->
             <StackPanel Orientation="Horizontal"

@@ -18,18 +18,20 @@ public class MiniMaxFetcher : IUsageFetcher
         var entries = new List<QuotaEntry>();
         var seenNames = new HashSet<string>();
 
-        // Call both endpoints and merge unique quotas
-        var endpoints = new[]
+        // Call both endpoints and merge unique quotas.
+        // Endpoint 1 (token_plan): usage_count is USED.
+        // Endpoint 2 (coding_plan): usage_count is REMAINING.
+        var endpoints = new (string url, bool usageIsRemaining)[]
         {
-            "https://api.minimax.io/v1/token_plan/remains",
-            "https://api.minimax.io/v1/api/openplatform/coding_plan/remains"
+            ("https://api.minimax.io/v1/token_plan/remains", false),
+            ("https://api.minimax.io/v1/api/openplatform/coding_plan/remains", true)
         };
 
-        foreach (var endpoint in endpoints)
+        foreach (var (url, usageIsRemaining) in endpoints)
         {
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Authorization =
                     new AuthenticationHeaderValue("Bearer", settings.MiniMaxApiKey.Trim());
 
@@ -44,7 +46,7 @@ public class MiniMaxFetcher : IUsageFetcher
                 {
                     foreach (var model in modelRemains.EnumerateArray())
                     {
-                        foreach (var entry in ParseModel(model))
+                        foreach (var entry in ParseModel(model, usageIsRemaining))
                         {
                             if (seenNames.Add(entry.Name))
                                 entries.Add(entry);
@@ -61,7 +63,7 @@ public class MiniMaxFetcher : IUsageFetcher
         return entries;
     }
 
-    private List<QuotaEntry> ParseModel(JsonElement model)
+    private List<QuotaEntry> ParseModel(JsonElement model, bool usageIsRemaining)
     {
         var entries = new List<QuotaEntry>();
 
@@ -77,29 +79,35 @@ public class MiniMaxFetcher : IUsageFetcher
                 return entries;
 
             long intervalTotal = 0;
-            long intervalRemaining = 0;
+            long intervalCount = 0;
             long weeklyTotal = 0;
-            long weeklyRemaining = 0;
+            long weeklyCount = 0;
             long remainsTime = 0;
             long weeklyRemainsTime = 0;
 
             if (model.TryGetProperty("current_interval_total_count", out var itc))
                 intervalTotal = itc.GetInt64();
             if (model.TryGetProperty("current_interval_usage_count", out var iuc))
-                intervalRemaining = iuc.GetInt64();
+                intervalCount = iuc.GetInt64();
             if (model.TryGetProperty("current_weekly_total_count", out var wtc))
                 weeklyTotal = wtc.GetInt64();
             if (model.TryGetProperty("current_weekly_usage_count", out var wuc))
-                weeklyRemaining = wuc.GetInt64();
+                weeklyCount = wuc.GetInt64();
             if (model.TryGetProperty("remains_time", out var rt))
                 remainsTime = rt.GetInt64();
             if (model.TryGetProperty("weekly_remains_time", out var wrt))
                 weeklyRemainsTime = wrt.GetInt64();
 
-            // current_*_usage_count is actually REMAINING, not used
+            // Endpoint semantics differ: token_plan returns USED, coding_plan returns REMAINING.
+            var intervalUsed = usageIsRemaining
+                ? Math.Max(0, intervalTotal - intervalCount)
+                : intervalCount;
+            var weeklyUsed = usageIsRemaining
+                ? Math.Max(0, weeklyTotal - weeklyCount)
+                : weeklyCount;
+
             if (intervalTotal > 0)
             {
-                var intervalUsed = Math.Max(0, intervalTotal - intervalRemaining);
                 var percent = intervalTotal > 0 ? (double)intervalUsed / intervalTotal : 0;
                 var resetSeconds = (int)(remainsTime / 1000);
                 entries.Add(new QuotaEntry
@@ -117,7 +125,6 @@ public class MiniMaxFetcher : IUsageFetcher
 
             if (weeklyTotal > 0)
             {
-                var weeklyUsed = Math.Max(0, weeklyTotal - weeklyRemaining);
                 var percent = weeklyTotal > 0 ? (double)weeklyUsed / weeklyTotal : 0;
                 var resetSeconds = (int)(weeklyRemainsTime / 1000);
                 entries.Add(new QuotaEntry
