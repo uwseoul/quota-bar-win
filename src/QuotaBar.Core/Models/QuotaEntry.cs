@@ -13,23 +13,27 @@ public class QuotaEntry
 
     public int DisplayPercent => (int)(UsagePercent * 100);
 
-    public double? PaceRatio
-    {
-        get
-        {
-            if (TotalDurationSeconds == null || TotalDurationSeconds.Value <= 0) return null;
-            var elapsedPercent = 1.0 - (ResetSeconds ?? 0) / (double)TotalDurationSeconds.Value;
-            if (elapsedPercent <= 0) return null;
-            return UsagePercent / elapsedPercent;
-        }
-    }
-
     public SpeedStatus SpeedStatus
     {
         get
         {
-            var ratio = PaceRatio;
-            if (ratio == null) return SpeedStatus.Normal;
+            if (TotalDurationSeconds == null || TotalDurationSeconds.Value <= 0)
+                return SpeedStatus.Normal;
+
+            var elapsedPercent = 1.0 - (ResetSeconds ?? 0) / (double)TotalDurationSeconds.Value;
+
+            // Window just started (< 5% elapsed) — judge by usage alone
+            if (elapsedPercent <= 0.05)
+            {
+                return UsagePercent switch
+                {
+                    < 0.5 => SpeedStatus.Slow,
+                    > 0.8 => SpeedStatus.Fast,
+                    _ => SpeedStatus.Normal
+                };
+            }
+
+            var ratio = UsagePercent / elapsedPercent;
             return ratio switch
             {
                 > 1.2 => SpeedStatus.Fast,
