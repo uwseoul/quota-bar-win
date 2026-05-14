@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -24,6 +27,8 @@ public partial class MainWindow : Window
         MouseLeftButtonDown += (_, __) => DragMove();
 
         var settings = _settingsService.Load();
+        ApplySettings(settings);
+
         _refreshTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(settings.RefreshIntervalSeconds)
@@ -32,6 +37,11 @@ public partial class MainWindow : Window
         _refreshTimer.Start();
 
         Loaded += async (_, __) => await LoadDataAsync();
+    }
+
+    private void ApplySettings(AppSettings settings)
+    {
+        Topmost = settings.AlwaysOnTop;
     }
 
     private async Task LoadDataAsync()
@@ -62,6 +72,10 @@ public partial class MainWindow : Window
 
         foreach (var kvp in results)
         {
+            // Skip disabled platforms
+            if (kvp.Value.Error == "Disabled")
+                continue;
+
             var card = new UsageCardView
             {
                 PlatformName = kvp.Key.ToUpperInvariant(),
@@ -92,10 +106,15 @@ public partial class MainWindow : Window
 
     private void RefreshSimpleView(Dictionary<string, PlatformResult> results)
     {
+        var settings = _settingsService.Load();
         var simpleItems = new List<SimpleItem>();
 
         foreach (var kvp in results)
         {
+            // Skip disabled platforms
+            if (kvp.Value.Error == "Disabled")
+                continue;
+
             var platformName = kvp.Key switch
             {
                 "glm" => "GLM",
@@ -111,7 +130,8 @@ public partial class MainWindow : Window
                 {
                     Platform = platformName,
                     PercentText = "Error",
-                    Color = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x33, 0x33))
+                    Color = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x33, 0x33)),
+                    DisplayStyle = settings.DisplayStyle
                 });
                 continue;
             }
@@ -122,36 +142,51 @@ public partial class MainWindow : Window
                 {
                     Platform = platformName,
                     PercentText = "N/A",
-                    Color = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80))
+                    Color = new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80)),
+                    DisplayStyle = settings.DisplayStyle
                 });
                 continue;
             }
 
-            // Pick the entry with highest usage percent as representative
-            var topEntry = kvp.Value.Entries[0];
-            foreach (var entry in kvp.Value.Entries)
+            // Apply MenuBarMode
+            var visibleEntries = GetVisibleEntries(kvp.Value.Entries, kvp.Key, settings);
+
+            foreach (var entry in visibleEntries)
             {
-                if (entry.UsagePercent > topEntry.UsagePercent)
-                    topEntry = entry;
+                var color = entry.SpeedStatus switch
+                {
+                    SpeedStatus.Fast => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x33, 0x33)),
+                    SpeedStatus.Normal => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xBF, 0x00)),
+                    SpeedStatus.Slow => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xCC, 0x66)),
+                    _ => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80))
+                };
+
+                simpleItems.Add(new SimpleItem
+                {
+                    Platform = platformName,
+                    PercentText = $"{entry.DisplayPercent}%",
+                    PercentValue = entry.DisplayPercent,
+                    Color = color,
+                    DisplayStyle = settings.DisplayStyle
+                });
             }
-
-            var color = topEntry.SpeedStatus switch
-            {
-                SpeedStatus.Fast => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x33, 0x33)),
-                SpeedStatus.Normal => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xBF, 0x00)),
-                SpeedStatus.Slow => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xCC, 0x66)),
-                _ => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80))
-            };
-
-            simpleItems.Add(new SimpleItem
-            {
-                Platform = platformName,
-                PercentText = $"{topEntry.DisplayPercent}%",
-                Color = color
-            });
         }
 
         SimpleItems.ItemsSource = simpleItems;
+    }
+
+    private List<QuotaEntry> GetVisibleEntries(List<QuotaEntry> entries, string platformId, AppSettings settings)
+    {
+        if (entries.Count == 0) return entries;
+
+        return settings.MenuBarMode switch
+        {
+            MenuBarMode.Highest => new List<QuotaEntry> { entries.MaxBy(e => e.UsagePercent) ?? entries[0] },
+            MenuBarMode.First => new List<QuotaEntry> { entries[0] },
+            MenuBarMode.OnePerPlatform => new List<QuotaEntry> { entries.MaxBy(e => e.UsagePercent) ?? entries[0] },
+            MenuBarMode.Manual => entries.Where(e => settings.ManualSelectedIds.Contains(e.Id)).ToList() is { Count: > 0 } selected ? selected : new List<QuotaEntry> { entries[0] },
+            _ => new List<QuotaEntry> { entries.MaxBy(e => e.UsagePercent) ?? entries[0] }
+        };
     }
 
     private void ToggleMode_Click(object sender, RoutedEventArgs e)
@@ -177,17 +212,70 @@ public partial class MainWindow : Window
     {
         var settingsWindow = new SettingsWindow();
         settingsWindow.Owner = this;
-        settingsWindow.Closed += (_, __) =>
+        settingsWindow.Closed += async (_, __) =>
         {
             var settings = _settingsService.Load();
+            ApplySettings(settings);
             _refreshTimer.Interval = TimeSpan.FromSeconds(settings.RefreshIntervalSeconds);
+            await LoadDataAsync();
         };
         settingsWindow.Show();
     }
 
-    private void Updates_Click(object sender, RoutedEventArgs e)
+    private async void Updates_Click(object sender, RoutedEventArgs e)
     {
-        MessageBox.Show("You are on the latest version.", "Check for Updates", MessageBoxButton.OK, MessageBoxImage.Information);
+        try
+        {
+            var currentVersion = GetVersion();
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.Add("User-Agent", "QuotaBar-Win");
+            var json = await http.GetStringAsync("https://api.github.com/repos/uwseoul/quota-bar-win/releases/latest");
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            var tagName = doc.RootElement.GetProperty("tag_name").GetString() ?? "v0.0.0";
+            var latestVersion = tagName.TrimStart('v');
+
+            if (IsNewerVersion(latestVersion, currentVersion))
+            {
+                var result = MessageBox.Show(
+                    $"새 버전 {tagName}을(를) 사용할 수 있습니다.\n다운로드 페이지를 여시겠습니까?",
+                    "업데이트 확인",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+
+                if (result == MessageBoxResult.Yes)
+                    Process.Start(new ProcessStartInfo("https://github.com/uwseoul/quota-bar-win/releases/latest") { UseShellExecute = true });
+            }
+            else
+            {
+                MessageBox.Show($"최신 버전입니다 (v{currentVersion}).", "업데이트 확인", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        catch
+        {
+            MessageBox.Show("업데이트 확인에 실패했습니다.", "업데이트 확인", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private static string GetVersion()
+    {
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        return version != null ? $"{version.Major}.{version.Minor}.{version.Build}" : "0.1.0";
+    }
+
+    private static bool IsNewerVersion(string newer, string current)
+    {
+        var newParts = newer.Split('.').Select(p => int.TryParse(p, out var v) ? v : 0).ToArray();
+        var curParts = current.Split('.').Select(p => int.TryParse(p, out var v) ? v : 0).ToArray();
+        var maxLen = Math.Max(newParts.Length, curParts.Length);
+
+        for (var i = 0; i < maxLen; i++)
+        {
+            var np = i < newParts.Length ? newParts[i] : 0;
+            var cp = i < curParts.Length ? curParts[i] : 0;
+            if (np > cp) return true;
+            if (np < cp) return false;
+        }
+        return false;
     }
 
     private void Quit_Click(object sender, RoutedEventArgs e)
@@ -204,6 +292,11 @@ public partial class MainWindow : Window
     {
         public string Platform { get; set; } = "";
         public string PercentText { get; set; } = "";
+        public int PercentValue { get; set; }
         public System.Windows.Media.Brush Color { get; set; } = System.Windows.Media.Brushes.Gray;
+        public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;
+
+        public Visibility PercentVisible => DisplayStyle != DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility GraphVisible => DisplayStyle == DisplayStyle.Graph ? Visibility.Visible : Visibility.Collapsed;
     }
 }

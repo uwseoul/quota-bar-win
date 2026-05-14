@@ -87,7 +87,12 @@ public partial class SettingsWindow : Window
 
         _settings.AlwaysOnTop = AlwaysOnTopCheck.IsChecked == true;
         _settings.Theme = ThemeCombo.SelectedItem?.ToString() ?? "Auto";
+
+        // Launch at Login
+        var launchChanged = _settings.LaunchAtLogin != (LaunchAtLoginCheck.IsChecked == true);
         _settings.LaunchAtLogin = LaunchAtLoginCheck.IsChecked == true;
+        if (launchChanged)
+            UpdateStartup(_settings.LaunchAtLogin);
 
         if (int.TryParse(RefreshIntervalBox.Text, out var interval) && interval >= 10)
             _settings.RefreshIntervalSeconds = interval;
@@ -99,5 +104,39 @@ public partial class SettingsWindow : Window
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private static void UpdateStartup(bool enable)
+    {
+        var startupFolder = Environment.GetFolderPath(Environment.SpecialFolder.Startup);
+        var shortcutPath = System.IO.Path.Combine(startupFolder, "QuotaBar.lnk");
+
+        if (enable)
+        {
+            try
+            {
+                // Use PowerShell to create a shortcut (.lnk file)
+                var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var ps = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-NoProfile -Command \"$ws = New-Object -ComObject WScript.Shell; $s = $ws.CreateShortcut('{shortcutPath}'); $s.TargetPath = '{exePath}'; $s.Save()\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                });
+                ps?.WaitForExit(5000);
+            }
+            catch { /* ignore */ }
+        }
+        else
+        {
+            try
+            {
+                if (System.IO.File.Exists(shortcutPath))
+                    System.IO.File.Delete(shortcutPath);
+            }
+            catch { /* ignore */ }
+        }
     }
 }

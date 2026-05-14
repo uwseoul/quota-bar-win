@@ -14,7 +14,8 @@
         Topmost="True"
         SizeToContent="Height"
         ResizeMode="NoResize">
-    <Border CornerRadius="12"
+    <Border x:Name="MainBorder"
+            CornerRadius="12"
             Padding="16"
             BorderBrush="#FF3D3D3D"
             BorderThickness="1">
@@ -116,7 +117,9 @@
                                     <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
+                                <!-- Speed indicator dot (always shown) -->
                                 <Ellipse Grid.Column="0"
                                          Width="10"
                                          Height="10"
@@ -128,12 +131,25 @@
                                            Foreground="White"
                                            FontSize="12"
                                            VerticalAlignment="Center"/>
-                                <TextBlock Grid.Column="2"
+                                <!-- Graph bar (visible when Style=Graph) -->
+                                <ProgressBar Grid.Column="2"
+                                             Value="{Binding PercentValue}"
+                                             Maximum="100"
+                                             Width="60"
+                                             Height="8"
+                                             Foreground="{Binding Color}"
+                                             Background="#33FFFFFF"
+                                             VerticalAlignment="Center"
+                                             Margin="4,0"
+                                             Visibility="{Binding GraphVisible}"/>
+                                <!-- Percent text (visible when Style!=Speed) -->
+                                <TextBlock Grid.Column="3"
                                            Text="{Binding PercentText}"
                                            Foreground="White"
                                            FontSize="12"
                                            FontWeight="Medium"
-                                           VerticalAlignment="Center"/>
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding PercentVisible}"/>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
