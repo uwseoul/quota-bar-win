@@ -34,7 +34,7 @@ public class CodexFetcher : IUsageFetcher
         {
             var body = await response.Content.ReadAsStringAsync();
             throw new InvalidOperationException(
-                $"Codex API returned HTTP {(int)response.StatusCode}: {response.ReasonPhrase}. Response: {body}");
+                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase.Trim()} | {body[..Math.Min(body.Length, 120)]}");
         }
 
         var json = await response.Content.ReadAsStringAsync();
