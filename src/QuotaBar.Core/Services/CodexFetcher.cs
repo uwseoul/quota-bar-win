@@ -178,17 +178,19 @@ public class CodexFetcher : IUsageFetcher
                     if (tokens.TryGetProperty("account_id", out var ai))
                         accountId = ai.GetString();
 
-                    // Fallback: tokens.id_token.chatgpt_account_id
+                    // Fallback: decode id_token JWT payload for chatgpt_account_id
                     if (string.IsNullOrWhiteSpace(accountId) &&
-                        tokens.TryGetProperty("id_token", out var idToken))
+                        tokens.TryGetProperty("id_token", out var idTokenElem) &&
+                        idTokenElem.ValueKind == JsonValueKind.String)
                     {
-                        if (idToken.TryGetProperty("chatgpt_account_id", out var cai))
-                            accountId = cai.GetString();
+                        var idTokenJwt = idTokenElem.GetString();
+                        if (!string.IsNullOrWhiteSpace(idTokenJwt))
+                            accountId = ExtractAccountIdFromJwt(idTokenJwt);
                     }
                 }
             }
         }
-        catch { /* ignore auth.json read errors */ }
+        catch { /* ignore auth.json read errors; settings override handles missing file */ }
 
         // Settings override
         if (!string.IsNullOrWhiteSpace(settings.CodexAuthToken))
@@ -197,5 +199,72 @@ public class CodexFetcher : IUsageFetcher
             accountId = settings.CodexAccountId;
 
         return (token, accountId);
+    }
+
+    private static string? ExtractAccountIdFromJwt(string jwt)
+    {
+        try
+        {
+            var parts = jwt.Split('.');
+            if (parts.Length < 2)
+                return null;
+
+            var payload = parts[1];
+            payload = payload.Replace('-', '+').Replace('_', '/');
+            switch (payload.Length % 4)
+            {
+                case 2: payload += "=="; break;
+                case 3: payload += "="; break;
+            }
+
+            var bytes = Convert.FromBase64String(payload);
+            var json = System.Text.Encoding.UTF8.GetString(bytes);
+            var doc = JsonDocument.Parse(json);
+
+            if (doc.RootElement.TryGetProperty("chatgpt_account_id", out var plainClaim) &&
+                plainClaim.ValueKind == JsonValueKind.String)
+            {
+                return plainClaim.GetString();
+            }
+
+            if (doc.RootElement.TryGetProperty("https://api.openai.com/auth.chatgpt_account_id", out var nsClaim) &&
+                nsClaim.ValueKind == JsonValueKind.String)
+            {
+                return nsClaim.GetString();
+            }
+
+            // Fallback: organizations array (prefer is_default)
+            if (doc.RootElement.TryGetProperty("https://api.openai.com/auth.organizations", out var orgs) &&
+                orgs.ValueKind == JsonValueKind.Array)
+            {
+                string? defaultOrgId = null;
+                string? firstOrgId = null;
+
+                foreach (var org in orgs.EnumerateArray())
+                {
+                    if (org.TryGetProperty("id", out var orgId) && orgId.ValueKind == JsonValueKind.String)
+                    {
+                        var id = orgId.GetString();
+                        if (firstOrgId == null)
+                            firstOrgId = id;
+
+                        if (org.TryGetProperty("is_default", out var isDefault) &&
+                            isDefault.ValueKind == JsonValueKind.True)
+                        {
+                            defaultOrgId = id;
+                            break;
+                        }
+                    }
+                }
+
+                return defaultOrgId ?? firstOrgId;
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
     }
 }
