@@ -25,9 +25,17 @@ public class CodexFetcher : IUsageFetcher
             new AuthenticationHeaderValue("Bearer", token.Trim());
         request.Headers.Add("ChatGPT-Account-Id", accountId.Trim());
         request.Headers.Add("Accept", "application/json");
+        request.Headers.Add("User-Agent", "codex-cli");
+        request.Headers.Add("Origin", "https://chatgpt.com");
+        request.Headers.Referrer = new Uri("https://chatgpt.com/");
 
         var response = await _client.SendAsync(request);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException(
+                $"Codex API returned HTTP {(int)response.StatusCode}: {response.ReasonPhrase}. Response: {body}");
+        }
 
         var json = await response.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(json);
