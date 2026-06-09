@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Title = $"Quota Bar v{Assembly.GetExecutingAssembly().GetName().Version}";
         MouseLeftButtonDown += (_, __) => DragMove();
 
         var settings = _settingsService.Load();
