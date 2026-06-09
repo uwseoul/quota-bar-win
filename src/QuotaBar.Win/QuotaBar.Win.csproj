@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\QuotaBar.Core\QuotaBar.Core.csproj" />
+    <Resource Include="Assets\traffic_light.png" />
   </ItemGroup>
 
   <PropertyGroup>

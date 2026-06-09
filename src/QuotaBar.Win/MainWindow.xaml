@@ -7,6 +7,7 @@
         xmlns:views="clr-namespace:QuotaBar.Win.Views"
         mc:Ignorable="d"
         Title="Quota Bar"
+        Icon="Assets/traffic_light.png"
         Width="320"
         WindowStyle="None"
         AllowsTransparency="True"
