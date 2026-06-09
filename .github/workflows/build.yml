@@ -24,3 +24,9 @@ jobs:
 
       - name: Build Release
         run: dotnet build src/QuotaBar.sln --configuration Release --no-restore
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuotaBar-Win-Release
+          path: src/QuotaBar.Win/bin/Release/net8.0-windows/
