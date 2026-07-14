@@ -20,12 +20,14 @@ public partial class MainWindow : Window
     private readonly SettingsService _settingsService = new();
     private readonly DispatcherTimer _refreshTimer;
     private Dictionary<string, PlatformResult>? _lastResults;
+    private ViewMode _currentViewMode = ViewMode.Detail;
 
     public MainWindow()
     {
         InitializeComponent();
         Title = $"Quota Bar v{Assembly.GetExecutingAssembly().GetName().Version}";
         MouseLeftButtonDown += (_, __) => DragMove();
+        StateChanged += MainWindow_StateChanged;
 
         var settings = _settingsService.Load();
         ApplySettings(settings);
@@ -43,6 +45,9 @@ public partial class MainWindow : Window
     private void ApplySettings(AppSettings settings)
     {
         Topmost = settings.AlwaysOnTop;
+        AlwaysOnTopToggle.IsChecked = settings.AlwaysOnTop;
+        _currentViewMode = settings.ViewMode;
+        ApplyViewMode(_currentViewMode);
     }
 
     private async Task LoadDataAsync()
@@ -52,14 +57,12 @@ public partial class MainWindow : Window
             var results = await _usageService.FetchAllAsync();
             _lastResults = results;
 
-            if (SimpleModeToggle.IsChecked == true)
-            {
+            if (_currentViewMode == ViewMode.Simple)
                 RefreshSimpleView(results);
-            }
+            else if (_currentViewMode == ViewMode.Compact)
+                RefreshCompactView(results);
             else
-            {
                 RefreshDetailView(results);
-            }
         }
         catch (Exception ex)
         {
@@ -154,20 +157,12 @@ public partial class MainWindow : Window
 
             foreach (var entry in visibleEntries)
             {
-                var color = entry.SpeedStatus switch
-                {
-                    SpeedStatus.Fast => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x33, 0x33)),
-                    SpeedStatus.Normal => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xBF, 0x00)),
-                    SpeedStatus.Slow => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xCC, 0x66)),
-                    _ => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80))
-                };
-
                 simpleItems.Add(new SimpleItem
                 {
                     Platform = platformName,
                     PercentText = $"{entry.DisplayPercent}%",
                     PercentValue = entry.DisplayPercent,
-                    Color = color,
+                    Color = SpeedStatusToBrush(entry.SpeedStatus),
                     DisplayStyle = settings.DisplayStyle
                 });
             }
@@ -175,6 +170,93 @@ public partial class MainWindow : Window
 
         SimpleItems.ItemsSource = simpleItems;
     }
+
+    private void RefreshCompactView(Dictionary<string, PlatformResult> results)
+    {
+        var settings = _settingsService.Load();
+        var items = new List<CompactItem>();
+
+        foreach (var kvp in results)
+        {
+            // Skip disabled platforms
+            if (kvp.Value.Error == "Disabled")
+                continue;
+
+            if (!string.IsNullOrEmpty(kvp.Value.Error))
+            {
+                items.Add(new CompactItem
+                {
+                    ShortLabel = GetShortLabel(kvp.Key),
+                    PercentText = "Err",
+                    Color = SpeedStatusToBrush(null),
+                    DisplayStyle = settings.DisplayStyle
+                });
+                continue;
+            }
+
+            if (kvp.Value.Entries.Count == 0)
+            {
+                items.Add(new CompactItem
+                {
+                    ShortLabel = GetShortLabel(kvp.Key),
+                    PercentText = "N/A",
+                    Color = SpeedStatusToBrush(null),
+                    DisplayStyle = settings.DisplayStyle
+                });
+                continue;
+            }
+
+            var visibleEntries = GetVisibleEntries(kvp.Value.Entries, kvp.Key, settings);
+            foreach (var entry in visibleEntries)
+            {
+                items.Add(new CompactItem
+                {
+                    ShortLabel = GetShortLabel(entry.Name),
+                    PercentText = $"{entry.DisplayPercent}%",
+                    PercentValue = entry.DisplayPercent,
+                    Color = SpeedStatusToBrush(entry.SpeedStatus),
+                    DisplayStyle = settings.DisplayStyle
+                });
+            }
+        }
+
+        CompactItems.ItemsSource = items;
+    }
+
+    /// <summary>
+    /// Maps a quota/window name to the compact short label used by the macOS
+    /// menu-bar rendering: 5 Hours→5H, Weekly→WK, Monthly→MO, 7D→7D,
+    /// Review→RV, Rolling→RL, fallback→QT.
+    /// </summary>
+    private static string GetShortLabel(string name)
+    {
+        if (string.IsNullOrEmpty(name))
+            return "QT";
+
+        var lower = name.ToLowerInvariant();
+        if (lower.Contains("5") && (lower.Contains("hour") || lower.Contains("5h")))
+            return "5H";
+        if (lower.Contains("weekly") || lower.Contains("week"))
+            return "WK";
+        if (lower.Contains("monthly") || lower.Contains("month"))
+            return "MO";
+        if (lower.Contains("7d"))
+            return "7D";
+        if (lower.Contains("review"))
+            return "RV";
+        if (lower.Contains("rolling"))
+            return "RL";
+        return "QT";
+    }
+
+    private static System.Windows.Media.Brush SpeedStatusToBrush(SpeedStatus? status) => status switch
+    {
+        SpeedStatus.Fast => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0x33, 0x33)),
+        SpeedStatus.Normal => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0xFF, 0xBF, 0x00)),
+        SpeedStatus.Slow => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x00, 0xCC, 0x66)),
+        null => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80)),
+        _ => new SolidColorBrush(System.Windows.Media.Color.FromRgb(0x80, 0x80, 0x80))
+    };
 
     private List<QuotaEntry> GetVisibleEntries(List<QuotaEntry> entries, string platformId, AppSettings settings)
     {
@@ -192,16 +274,98 @@ public partial class MainWindow : Window
 
     private void ToggleMode_Click(object sender, RoutedEventArgs e)
     {
-        DetailScroll.Visibility = SimpleModeToggle.IsChecked == true ? Visibility.Collapsed : Visibility.Visible;
-        SimplePanel.Visibility = SimpleModeToggle.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-
-        if (_lastResults != null)
+        _currentViewMode = _currentViewMode switch
         {
-            if (SimpleModeToggle.IsChecked == true)
-                RefreshSimpleView(_lastResults);
-            else
-                RefreshDetailView(_lastResults);
+            ViewMode.Detail => ViewMode.Simple,
+            ViewMode.Simple => ViewMode.Compact,
+            _ => ViewMode.Detail
+        };
+
+        var settings = _settingsService.Load();
+        settings.ViewMode = _currentViewMode;
+        _settingsService.Save(settings);
+
+        ApplyViewMode(_currentViewMode);
+
+        if (_lastResults == null)
+            return;
+
+        if (_currentViewMode == ViewMode.Simple)
+            RefreshSimpleView(_lastResults);
+        else if (_currentViewMode == ViewMode.Compact)
+            RefreshCompactView(_lastResults);
+        else
+            RefreshDetailView(_lastResults);
+    }
+
+    private void ApplyViewMode(ViewMode mode)
+    {
+        _currentViewMode = mode;
+
+        var isCompact = mode == ViewMode.Compact;
+
+        CloseButton.Visibility = isCompact ? Visibility.Collapsed : Visibility.Visible;
+        HeaderGrid.Visibility = isCompact ? Visibility.Collapsed : Visibility.Visible;
+        DetailScroll.Visibility = mode == ViewMode.Detail ? Visibility.Visible : Visibility.Collapsed;
+        SimplePanel.Visibility = mode == ViewMode.Simple ? Visibility.Visible : Visibility.Collapsed;
+        CompactPanel.Visibility = isCompact ? Visibility.Visible : Visibility.Collapsed;
+        FooterPanel.Visibility = isCompact ? Visibility.Collapsed : Visibility.Visible;
+
+        if (isCompact)
+        {
+            MainBorder.Padding = new Thickness(4);
+            MainBorder.CornerRadius = new CornerRadius(8);
+            SizeToContent = SizeToContent.WidthAndHeight;
+            Width = double.NaN;
         }
+        else
+        {
+            MainBorder.Padding = new Thickness(16);
+            MainBorder.CornerRadius = new CornerRadius(12);
+            SizeToContent = SizeToContent.Height;
+            Width = 320;
+        }
+
+        UpdateWindowOptionsVisibility();
+        UpdateModeToggleToolTip();
+    }
+
+    private void UpdateWindowOptionsVisibility()
+    {
+        var showOptions = _currentViewMode == ViewMode.Detail && WindowState != WindowState.Minimized;
+        AlwaysOnTopToggle.Visibility = showOptions ? Visibility.Visible : Visibility.Collapsed;
+        MinimizeButton.Visibility = showOptions ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void MainWindow_StateChanged(object? sender, EventArgs e)
+    {
+        UpdateWindowOptionsVisibility();
+    }
+
+    private void AlwaysOnTopToggle_Click(object sender, RoutedEventArgs e)
+    {
+        var settings = _settingsService.Load();
+        settings.AlwaysOnTop = AlwaysOnTopToggle.IsChecked == true;
+        _settingsService.Save(settings);
+        Topmost = settings.AlwaysOnTop;
+    }
+
+    private void MinimizeButton_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void UpdateModeToggleToolTip()
+    {
+        var label = _currentViewMode switch
+        {
+            ViewMode.Detail => "Detail — click → Simple",
+            ViewMode.Simple => "Simple — click → Compact",
+            ViewMode.Compact => "Compact — click → Detail",
+            _ => "Toggle View Mode"
+        };
+        ModeToggleButton.ToolTip = label;
+        CompactToggle.ToolTip = label;
     }
 
     private async void Refresh_Click(object sender, RoutedEventArgs e)
@@ -299,5 +463,22 @@ public partial class MainWindow : Window
 
         public Visibility PercentVisible => DisplayStyle != DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
         public Visibility GraphVisible => DisplayStyle == DisplayStyle.Graph ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private class CompactItem
+    {
+        public string ShortLabel { get; set; } = "QT";
+        public string PercentText { get; set; } = "";
+        public int PercentValue { get; set; }
+        public System.Windows.Media.Brush Color { get; set; } = System.Windows.Media.Brushes.Gray;
+        public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;
+
+        // 24px for Speed (dot only), 36px otherwise — matches the macOS menu-bar rendering.
+        public int BlockWidth => DisplayStyle == DisplayStyle.Speed ? 24 : 36;
+
+        public Visibility LabelVisible => DisplayStyle != DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility PercentVisible => DisplayStyle == DisplayStyle.Percent ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility GraphVisible => DisplayStyle == DisplayStyle.Graph ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility DotVisible => DisplayStyle == DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
     }
 }

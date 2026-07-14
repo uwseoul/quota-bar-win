@@ -44,8 +44,9 @@ public partial class SettingsWindow : Window
         DisplayStyleCombo.ItemsSource = Enum.GetNames(typeof(DisplayStyle));
         DisplayStyleCombo.SelectedItem = _settings.DisplayStyle.ToString();
 
-        // Always on Top
-        AlwaysOnTopCheck.IsChecked = _settings.AlwaysOnTop;
+        // View Mode
+        ViewModeCombo.ItemsSource = Enum.GetNames(typeof(ViewMode));
+        ViewModeCombo.SelectedItem = _settings.ViewMode.ToString();
 
         // Theme
         ThemeCombo.ItemsSource = new[] { "Auto", "Light", "Dark" };
@@ -85,7 +86,9 @@ public partial class SettingsWindow : Window
         if (DisplayStyleCombo.SelectedItem is string styleStr && Enum.TryParse<DisplayStyle>(styleStr, out var style))
             _settings.DisplayStyle = style;
 
-        _settings.AlwaysOnTop = AlwaysOnTopCheck.IsChecked == true;
+        if (ViewModeCombo.SelectedItem is string vmStr && Enum.TryParse<ViewMode>(vmStr, out var vm))
+            _settings.ViewMode = vm;
+
         _settings.Theme = ThemeCombo.SelectedItem?.ToString() ?? "Auto";
 
         // Launch at Login

@@ -15,6 +15,7 @@ public class AppSettings
     public bool CodexEnabled { get; set; } = true;
     public bool OpenCodeGoEnabled { get; set; } = true;
 
+    public ViewMode ViewMode { get; set; } = ViewMode.Detail;
     public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;
     public MenuBarMode MenuBarMode { get; set; } = MenuBarMode.Highest;
 

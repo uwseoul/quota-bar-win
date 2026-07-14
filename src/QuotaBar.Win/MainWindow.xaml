@@ -29,7 +29,8 @@
         </Border.Background>
         <StackPanel>
             <!-- Close Button (top right) -->
-            <Button Content="✕"
+            <Button x:Name="CloseButton"
+                    Content="✕"
                     Foreground="White"
                     Background="Transparent"
                     BorderThickness="0"
@@ -42,53 +43,33 @@
                     Margin="0,-8,-8,0"/>
 
             <!-- Header -->
-            <Grid Margin="0,0,0,8">
+            <Grid x:Name="HeaderGrid" Margin="0,0,0,8">
                 <TextBlock Text="Quota Bar"
                            Foreground="White"
                            FontSize="14"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <ToggleButton x:Name="SimpleModeToggle"
-                                  Content="🚥"
-                                  Foreground="White"
-                                  FontSize="12"
-                                  Padding="4,2"
-                                  Click="ToggleMode_Click"
-                                  Cursor="Hand"
-                                  ToolTip="Toggle Simple Mode"
-                                  Margin="0,0,8,0">
-                        <ToggleButton.Style>
-                            <Style TargetType="ToggleButton">
-                                <Setter Property="Background" Value="Transparent"/>
-                                <Setter Property="BorderBrush" Value="#FF3D3D3D"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="ToggleButton">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="4"
-                                                    Padding="{TemplateBinding Padding}">
-                                                <ContentPresenter HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"/>
-                                            </Border>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                                <Style.Triggers>
-                                    <Trigger Property="IsChecked" Value="True">
-                                        <Setter Property="Background" Value="#FF007AFF"/>
-                                        <Setter Property="BorderBrush" Value="#FF007AFF"/>
-                                    </Trigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#33FFFFFF"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ToggleButton.Style>
-                    </ToggleButton>
+                <StackPanel x:Name="WindowOptionsPanel"
+                            Orientation="Horizontal"
+                            HorizontalAlignment="Right">
+                    <ToggleButton x:Name="AlwaysOnTopToggle"
+                                  Content="📌"
+                                  Style="{StaticResource PinToggleStyle}"
+                                  Click="AlwaysOnTopToggle_Click"
+                                  ToolTip="Always on Top"
+                                  Margin="0,0,8,0"/>
+                    <Button x:Name="MinimizeButton"
+                            Content="🗕"
+                            Style="{StaticResource ModeToggleStyle}"
+                            Click="MinimizeButton_Click"
+                            ToolTip="Minimize"
+                            Margin="0,0,8,0"/>
+                    <Button x:Name="ModeToggleButton"
+                            Content="🚥"
+                            Style="{StaticResource ModeToggleStyle}"
+                            Click="ToggleMode_Click"
+                            ToolTip="Toggle View Mode"
+                            Margin="0,0,8,0"/>
                     <Button Content="🔄"
                             Background="Transparent"
                             BorderThickness="0"
@@ -157,8 +138,87 @@
                 </ItemsControl>
             </StackPanel>
 
+            <!-- Compact Mode Panel (single horizontal row, macOS menu-bar style) -->
+            <StackPanel x:Name="CompactPanel"
+                        Orientation="Horizontal"
+                        Visibility="Collapsed">
+                <ItemsControl x:Name="CompactItems">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="{Binding BlockWidth}"
+                                  Height="24"
+                                  Margin="1,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <!-- Short label (Percent / Graph styles) -->
+                                <TextBlock Grid.Row="0"
+                                           Text="{Binding ShortLabel}"
+                                           Foreground="#CCFFFFFF"
+                                           FontSize="8"
+                                           FontWeight="SemiBold"
+                                           HorizontalAlignment="Center"
+                                           Visibility="{Binding LabelVisible}"/>
+                                <!-- Percent value (Percent style) -->
+                                <TextBlock Grid.Row="1"
+                                           Text="{Binding PercentText}"
+                                           Foreground="White"
+                                           FontSize="10"
+                                           FontWeight="Medium"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           Visibility="{Binding PercentVisible}"/>
+                                <!-- Horizontal progress bar (Graph style) -->
+                                <ProgressBar Grid.Row="1"
+                                             Value="{Binding PercentValue}"
+                                             Maximum="100"
+                                             Width="28"
+                                             Height="4"
+                                             Foreground="{Binding Color}"
+                                             Background="#33FFFFFF"
+                                             VerticalAlignment="Center"
+                                             HorizontalAlignment="Center"
+                                             Visibility="{Binding GraphVisible}"/>
+                                <!-- Speed indicator dot (Speed style) -->
+                                <Ellipse Grid.Row="0"
+                                         Grid.RowSpan="2"
+                                         Width="10"
+                                         Height="10"
+                                         Fill="{Binding Color}"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Visibility="{Binding DotVisible}"/>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- Compact mode controls (so the user is never trapped) -->
+                <Button x:Name="CompactToggle"
+                        Content="🚥"
+                        Style="{StaticResource ModeToggleStyle}"
+                        Click="ToggleMode_Click"
+                        ToolTip="Toggle View Mode"
+                        Margin="4,0,0,0"/>
+                <Button x:Name="CompactClose"
+                        Content="✕"
+                        Foreground="#99FFFFFF"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        FontSize="12"
+                        Padding="4,2"
+                        Click="CloseButton_Click"
+                        Cursor="Hand"/>
+            </StackPanel>
+
             <!-- Footer -->
-            <StackPanel Orientation="Horizontal"
+            <StackPanel x:Name="FooterPanel"
+                        Orientation="Horizontal"
                         HorizontalAlignment="Center"
                         Margin="0,8,0,0">
                 <Button Content="Settings..."

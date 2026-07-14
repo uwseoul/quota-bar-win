@@ -147,10 +147,19 @@
                                FontSize="10"
                                FontWeight="Bold"
                                Margin="0,12,0,4"/>
-                    <TextBlock Text="Mode"
+                    <TextBlock Text="View Mode"
                                Foreground="White"
                                FontSize="11"
                                Margin="0,2"/>
+                    <ComboBox x:Name="ViewModeCombo"
+                              Background="#FF1A1A1A"
+                              Foreground="White"
+                              BorderBrush="#FF3D3D3D"
+                              Margin="0,2"/>
+                    <TextBlock Text="Mode"
+                               Foreground="White"
+                               FontSize="11"
+                               Margin="0,4,0,2"/>
                     <ComboBox x:Name="MenuBarModeCombo"
                               Background="#FF1A1A1A"
                               Foreground="White"
@@ -165,14 +174,6 @@
                               Foreground="White"
                               BorderBrush="#FF3D3D3D"
                               Margin="0,2"/>
-
-                    <!-- Window -->
-                    <TextBlock Text="Window"
-                               Foreground="#99FFFFFF"
-                               FontSize="10"
-                               FontWeight="Bold"
-                               Margin="0,12,0,4"/>
-                    <CheckBox x:Name="AlwaysOnTopCheck" Content="Always on Top" Foreground="White" Margin="0,2"/>
 
                     <!-- Appearance -->
                     <TextBlock Text="Appearance"
