@@ -27,7 +27,6 @@ public partial class MainWindow : Window
         InitializeComponent();
         Title = $"Quota Bar v{Assembly.GetExecutingAssembly().GetName().Version}";
         MouseLeftButtonDown += (_, __) => DragMove();
-        StateChanged += MainWindow_StateChanged;
 
         var settings = _settingsService.Load();
         ApplySettings(settings);
@@ -39,6 +38,11 @@ public partial class MainWindow : Window
         _refreshTimer.Tick += async (_, __) => await LoadDataAsync();
         _refreshTimer.Start();
 
+        Loaded += (_, __) =>
+        {
+            StateChanged += MainWindow_StateChanged;
+            ApplyViewMode(_currentViewMode);
+        };
         Loaded += async (_, __) => await LoadDataAsync();
     }
 
@@ -47,7 +51,6 @@ public partial class MainWindow : Window
         Topmost = settings.AlwaysOnTop;
         AlwaysOnTopToggle.IsChecked = settings.AlwaysOnTop;
         _currentViewMode = settings.ViewMode;
-        ApplyViewMode(_currentViewMode);
     }
 
     private async Task LoadDataAsync()
