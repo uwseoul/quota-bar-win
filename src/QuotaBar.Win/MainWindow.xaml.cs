@@ -313,8 +313,8 @@ public partial class MainWindow : Window
 
         if (isCompact)
         {
-            MainBorder.Padding = new Thickness(4);
-            MainBorder.CornerRadius = new CornerRadius(8);
+            MainBorder.Padding = new Thickness(2);
+            MainBorder.CornerRadius = new CornerRadius(4);
             SizeToContent = SizeToContent.WidthAndHeight;
             Width = double.NaN;
         }
@@ -473,8 +473,7 @@ public partial class MainWindow : Window
         public System.Windows.Media.Brush Color { get; set; } = System.Windows.Media.Brushes.Gray;
         public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;
 
-        // 24px for Speed (dot only), 36px otherwise — matches the macOS menu-bar rendering.
-        public int BlockWidth => DisplayStyle == DisplayStyle.Speed ? 24 : 36;
+        public int BlockWidth => DisplayStyle == DisplayStyle.Speed ? 18 : 28;
 
         public Visibility LabelVisible => DisplayStyle != DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
         public Visibility PercentVisible => DisplayStyle == DisplayStyle.Percent ? Visibility.Visible : Visibility.Collapsed;
