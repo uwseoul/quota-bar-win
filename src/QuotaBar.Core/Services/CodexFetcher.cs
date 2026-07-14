@@ -33,8 +33,9 @@ public class CodexFetcher : IUsageFetcher
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
+            var reason = response.ReasonPhrase?.Trim() ?? "Unknown";
             throw new InvalidOperationException(
-                $"HTTP {(int)response.StatusCode} {response.ReasonPhrase.Trim()}\n{body[..Math.Min(body.Length, 200)]}");
+                $"HTTP {(int)response.StatusCode} {reason}\n{body[..Math.Min(body.Length, 200)]}");
         }
 
         var json = await response.Content.ReadAsStringAsync();
@@ -50,7 +51,11 @@ public class CodexFetcher : IUsageFetcher
         if (entries.Count == 0)
             throw new InvalidOperationException("Could not parse Codex usage data. Response schema may have changed.");
 
-        return entries;
+        // Remove duplicates by Id, preferring entries with reset info
+        return entries
+            .GroupBy(e => e.Id)
+            .Select(g => g.OrderByDescending(e => e.ResetSeconds ?? 0).First())
+            .ToList();
     }
 
     private void TryParseRateLimit(JsonElement root, List<QuotaEntry> entries)
@@ -123,41 +128,74 @@ public class CodexFetcher : IUsageFetcher
             int limitWindowSeconds = 0;
 
             if (elem.TryGetProperty("used_percent", out var up))
-            {
-                if (up.ValueKind == JsonValueKind.Number)
-                    usedPercent = up.GetDouble();
-            }
+                usedPercent = GetDouble(up);
             if (elem.TryGetProperty("reset_at", out var ra))
-                resetAt = ra.GetInt64();
+                resetAt = GetInt64(ra);
             if (elem.TryGetProperty("reset_after_seconds", out var ras))
-                resetAfterSeconds = ras.GetInt32();
+                resetAfterSeconds = (int)GetInt64(ras);
             if (elem.TryGetProperty("limit_window_seconds", out var lws))
-                limitWindowSeconds = lws.GetInt32();
+                limitWindowSeconds = (int)GetInt64(lws);
 
             int? resetSeconds = null;
-            if (resetAt > 0)
-                resetSeconds = (int)(resetAt - DateTimeOffset.UtcNow.ToUnixTimeSeconds());
-            else if (resetAfterSeconds > 0)
+            if (resetAfterSeconds > 0)
                 resetSeconds = resetAfterSeconds;
+            else if (resetAt > 0)
+            {
+                var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                // reset_at might be Unix timestamp in milliseconds (13 digits)
+                var resetAtSec = resetAt > 9999999999 ? resetAt / 1000 : resetAt;
+                resetSeconds = Math.Max(0, (int)(resetAtSec - now));
+            }
+
+            // Prefer the server-provided duration for labeling. Codex has changed
+            // shapes over time; primary_window can represent either 5H or 7D.
+            var windowName = name;
+            var effectiveDuration = limitWindowSeconds > 0 ? limitWindowSeconds : totalDuration;
+            if (limitWindowSeconds == 604800)
+                windowName = "7D";
+            else if (limitWindowSeconds == 18000)
+                windowName = "5H";
+
+            if (resetSeconds > effectiveDuration)
+                resetSeconds = effectiveDuration;
 
             var percent = usedPercent / 100.0;
 
             return new QuotaEntry
             {
-                Id = $"codex-{name.ToLowerInvariant()}",
+                Id = $"codex-{windowName.ToLowerInvariant()}",
                 PlatformId = "codex",
-                Name = name,
+                Name = windowName,
+                ModelName = "Codex",
                 UsagePercent = percent,
                 Usage = null,
                 Total = null,
                 ResetSeconds = resetSeconds,
-                TotalDurationSeconds = limitWindowSeconds > 0 ? limitWindowSeconds : totalDuration
+                TotalDurationSeconds = effectiveDuration
             };
         }
         catch
         {
             return null;
         }
+    }
+
+    private static double GetDouble(JsonElement elem)
+    {
+        if (elem.ValueKind == JsonValueKind.Number)
+            return elem.GetDouble();
+        if (elem.ValueKind == JsonValueKind.String && double.TryParse(elem.GetString(), out var d))
+            return d;
+        return 0;
+    }
+
+    private static long GetInt64(JsonElement elem)
+    {
+        if (elem.ValueKind == JsonValueKind.Number)
+            return elem.GetInt64();
+        if (elem.ValueKind == JsonValueKind.String && long.TryParse(elem.GetString(), out var l))
+            return l;
+        return 0;
     }
 
     private static (string? Token, string? AccountId) ReadAuth(AppSettings settings)

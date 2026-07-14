@@ -7,7 +7,8 @@
         xmlns:views="clr-namespace:QuotaBar.Win.Views"
         mc:Ignorable="d"
         Title="Quota Bar"
-        Icon="Assets/traffic_light.png"
+        Icon="Assets/traffic_light.ico"
+        WindowStartupLocation="CenterScreen"
         Width="320"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -40,7 +41,7 @@
                     Padding="4"
                     Click="CloseButton_Click"
                     Cursor="Hand"
-                    Margin="0,-8,-8,0"/>
+                     Margin="0,-8,-2,0"/>
 
             <!-- Header -->
             <Grid x:Name="HeaderGrid" Margin="0,0,0,8">
@@ -82,6 +83,7 @@
 
             <!-- Content Cards (Detail Mode) -->
             <ScrollViewer x:Name="DetailScroll"
+                          Grid.IsSharedSizeScope="True"
                           MaxHeight="400"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
@@ -91,47 +93,59 @@
             <!-- Simple Mode Panel -->
             <StackPanel x:Name="SimplePanel"
                         Visibility="Collapsed">
-                <ItemsControl x:Name="SimpleItems">
+                <ItemsControl x:Name="SimpleItems"
+                              HorizontalAlignment="Stretch">
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,3">
+                            <Grid Margin="0,3"
+                                  HorizontalAlignment="Stretch">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
-                                    <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <!-- Speed indicator dot (always shown) -->
-                                <Ellipse Grid.Column="0"
-                                         Width="10"
-                                         Height="10"
-                                         Fill="{Binding Color}"
-                                         VerticalAlignment="Center"
-                                         Margin="0,0,8,0"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Platform}"
-                                           Foreground="White"
-                                           FontSize="12"
-                                           VerticalAlignment="Center"/>
-                                <!-- Graph bar (visible when Style=Graph) -->
-                                <ProgressBar Grid.Column="2"
-                                             Value="{Binding PercentValue}"
-                                             Maximum="100"
-                                             Width="60"
-                                             Height="8"
-                                             Foreground="{Binding Color}"
-                                             Background="#33FFFFFF"
+                                <!-- Left label area -->
+                                <StackPanel Grid.Column="0"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                    <Ellipse Width="12"
+                                             Height="12"
+                                             Fill="{Binding Color}"
                                              VerticalAlignment="Center"
-                                             Margin="4,0"
-                                             Visibility="{Binding GraphVisible}"/>
-                                <!-- Percent text (visible when Style!=Speed) -->
-                                <TextBlock Grid.Column="3"
-                                           Text="{Binding PercentText}"
-                                           Foreground="White"
-                                           FontSize="12"
-                                           FontWeight="Medium"
-                                           VerticalAlignment="Center"
-                                           Visibility="{Binding PercentVisible}"/>
+                                             Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding Platform}"
+                                               Foreground="White"
+                                               FontSize="14"
+                                               FontWeight="Bold"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+
+                                <!-- Right info area: Percent -> Graph -->
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding PercentText}"
+                                               Foreground="White"
+                                               FontSize="14"
+                                               FontWeight="Medium"
+                                               VerticalAlignment="Center"
+                                               Margin="0,0,8,0"
+                                               Visibility="{Binding PercentVisible}"/>
+                                    <ProgressBar Value="{Binding PercentValue}"
+                                                 Maximum="100"
+                                                 Width="80"
+                                                 Height="12"
+                                                 Foreground="{Binding Color}"
+                                                 Background="#33FFFFFF"
+                                                 VerticalAlignment="Center"
+                                                 Visibility="{Binding GraphVisible}"/>
+                                </StackPanel>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -144,7 +158,7 @@
                         Visibility="Collapsed">
                 <ScrollViewer HorizontalScrollBarVisibility="Auto"
                               VerticalScrollBarVisibility="Disabled"
-                              MaxWidth="260">
+                              MaxWidth="420">
                     <ItemsControl x:Name="CompactItems">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
@@ -154,47 +168,55 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
                                 <Grid Width="{Binding BlockWidth}"
-                                      Height="18"
-                                      Margin="0">
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="Auto"/>
-                                        <RowDefinition Height="*"/>
-                                    </Grid.RowDefinitions>
-                                    <!-- Short label (Percent / Graph styles) -->
-                                    <TextBlock Grid.Row="0"
-                                               Text="{Binding ShortLabel}"
-                                               Foreground="#CCFFFFFF"
-                                               FontSize="6"
-                                               FontWeight="SemiBold"
-                                               HorizontalAlignment="Center"
-                                               Visibility="{Binding LabelVisible}"/>
+                                      Height="34"
+                                      Margin="4,1">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <!-- Label + Model -->
+                                    <StackPanel Grid.Column="0"
+                                                Orientation="Vertical"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Center"
+                                                Margin="4,0,7,0">
+                                        <TextBlock Text="{Binding ShortLabel}"
+                                                   Foreground="#CCFFFFFF"
+                                                   FontSize="10.5"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Left"/>
+                                        <TextBlock Text="{Binding ModelName}"
+                                                   Foreground="#99FFFFFF"
+                                                   FontSize="9"
+                                                   HorizontalAlignment="Left"
+                                                   Visibility="{Binding ModelNameVisible}"/>
+                                    </StackPanel>
                                     <!-- Percent value (Percent style) -->
-                                    <TextBlock Grid.Row="1"
+                                    <TextBlock Grid.Column="1"
                                                Text="{Binding PercentText}"
                                                Foreground="White"
-                                               FontSize="8"
+                                               FontSize="13.5"
                                                FontWeight="Medium"
-                                               HorizontalAlignment="Center"
+                                               HorizontalAlignment="Left"
                                                VerticalAlignment="Center"
                                                Visibility="{Binding PercentVisible}"/>
                                     <!-- Horizontal progress bar (Graph style) -->
-                                    <ProgressBar Grid.Row="1"
+                                    <ProgressBar Grid.Column="1"
                                                  Value="{Binding PercentValue}"
                                                  Maximum="100"
-                                                 Width="20"
-                                                 Height="3"
+                                                 Width="34"
+                                                 Height="7"
                                                  Foreground="{Binding Color}"
                                                  Background="#33FFFFFF"
                                                  VerticalAlignment="Center"
-                                                 HorizontalAlignment="Center"
+                                                 HorizontalAlignment="Left"
                                                  Visibility="{Binding GraphVisible}"/>
                                     <!-- Speed indicator dot (Speed style) -->
-                                    <Ellipse Grid.Row="0"
-                                             Grid.RowSpan="2"
-                                             Width="8"
-                                             Height="8"
+                                    <Ellipse Grid.Column="1"
+                                             Width="14"
+                                             Height="14"
                                              Fill="{Binding Color}"
-                                             HorizontalAlignment="Center"
+                                             HorizontalAlignment="Left"
                                              VerticalAlignment="Center"
                                              Visibility="{Binding DotVisible}"/>
                                 </Grid>

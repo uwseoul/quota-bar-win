@@ -5,6 +5,7 @@ public class QuotaEntry
     public string Id { get; set; } = string.Empty;
     public string PlatformId { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public string? ModelName { get; set; }
     public double UsagePercent { get; set; } // 0.0 - 1.0
     public long? Usage { get; set; }
     public long? Total { get; set; }
@@ -12,11 +13,15 @@ public class QuotaEntry
     public int? TotalDurationSeconds { get; set; }
 
     public int DisplayPercent => (int)(UsagePercent * 100);
+    public string PercentDisplay => UsagePercent < 0 ? "N/A" : $"{DisplayPercent}%";
 
     public SpeedStatus SpeedStatus
     {
         get
         {
+            if (UsagePercent < 0)
+                return SpeedStatus.Normal;
+
             if (TotalDurationSeconds == null || TotalDurationSeconds.Value <= 0)
                 return SpeedStatus.Normal;
 
@@ -50,8 +55,8 @@ public class QuotaEntry
             if (ResetSeconds == null) return string.Empty;
             var ts = TimeSpan.FromSeconds(ResetSeconds.Value);
             if (ts.TotalDays >= 1)
-                return $"Reset in {ts.Days}d {ts.Hours}h";
-            return $"Reset in {ts.Hours}h {ts.Minutes}m";
+                return $"{ts.Days}d {ts.Hours}h";
+            return $"{ts.Hours}h {ts.Minutes}m";
         }
     }
 

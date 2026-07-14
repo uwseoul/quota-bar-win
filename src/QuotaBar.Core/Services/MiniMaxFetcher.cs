@@ -63,6 +63,18 @@ public class MiniMaxFetcher : IUsageFetcher
         return entries;
     }
 
+    private static string? ShortModelName(string? modelName)
+    {
+        if (string.IsNullOrWhiteSpace(modelName))
+            return null;
+        // "minimax-pro-01" → "pro-01"
+        if (modelName.StartsWith("minimax-", StringComparison.OrdinalIgnoreCase))
+            return modelName.Substring("minimax-".Length);
+        if (modelName.StartsWith("coding-", StringComparison.OrdinalIgnoreCase))
+            return modelName.Substring("coding-".Length);
+        return modelName;
+    }
+
     private List<QuotaEntry> ParseModel(JsonElement model, bool usageIsRemaining)
     {
         var entries = new List<QuotaEntry>();
@@ -115,6 +127,7 @@ public class MiniMaxFetcher : IUsageFetcher
                     Id = "minimax-5h",
                     PlatformId = "minimax",
                     Name = "5H",
+                    ModelName = ShortModelName(modelName),
                     UsagePercent = percent,
                     Usage = intervalUsed,
                     Total = intervalTotal,
@@ -132,6 +145,7 @@ public class MiniMaxFetcher : IUsageFetcher
                     Id = "minimax-weekly",
                     PlatformId = "minimax",
                     Name = "Weekly",
+                    ModelName = ShortModelName(modelName),
                     UsagePercent = percent,
                     Usage = weeklyUsed,
                     Total = weeklyTotal,

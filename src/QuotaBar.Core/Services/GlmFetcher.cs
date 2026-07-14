@@ -92,6 +92,7 @@ public class GlmFetcher : IUsageFetcher
                 Id = $"glm-{type}-{unit}",
                 PlatformId = "glm",
                 Name = name,
+                ModelName = type == "TIME_LIMIT" ? "MCP" : "GLM",
                 UsagePercent = percent,
                 Usage = currentValue,
                 Total = total,

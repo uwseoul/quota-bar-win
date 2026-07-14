@@ -26,7 +26,22 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         Title = $"Quota Bar v{Assembly.GetExecutingAssembly().GetName().Version}";
-        MouseLeftButtonDown += (_, __) => DragMove();
+        PreviewMouseLeftButtonDown += (_, e) =>
+        {
+            var depObj = e.OriginalSource as DependencyObject;
+            while (depObj != null)
+            {
+                if (depObj is System.Windows.Controls.Button
+                    or System.Windows.Controls.Primitives.ToggleButton
+                    or System.Windows.Controls.TextBox
+                    or System.Windows.Controls.ComboBox
+                    or System.Windows.Controls.Primitives.ScrollBar
+                    or System.Windows.Controls.ProgressBar)
+                    return;
+                depObj = System.Windows.Media.VisualTreeHelper.GetParent(depObj);
+            }
+            DragMove();
+        };
 
         var settings = _settingsService.Load();
         ApplySettings(settings);
@@ -190,6 +205,7 @@ public partial class MainWindow : Window
                 items.Add(new CompactItem
                 {
                     ShortLabel = GetShortLabel(kvp.Key),
+                    ModelName = null,
                     PercentText = "Err",
                     Color = SpeedStatusToBrush(null),
                     DisplayStyle = settings.DisplayStyle
@@ -202,6 +218,7 @@ public partial class MainWindow : Window
                 items.Add(new CompactItem
                 {
                     ShortLabel = GetShortLabel(kvp.Key),
+                    ModelName = null,
                     PercentText = "N/A",
                     Color = SpeedStatusToBrush(null),
                     DisplayStyle = settings.DisplayStyle
@@ -215,6 +232,7 @@ public partial class MainWindow : Window
                 items.Add(new CompactItem
                 {
                     ShortLabel = GetShortLabel(entry.Name),
+                    ModelName = entry.ModelName,
                     PercentText = $"{entry.DisplayPercent}%",
                     PercentValue = entry.DisplayPercent,
                     Color = SpeedStatusToBrush(entry.SpeedStatus),
@@ -320,6 +338,10 @@ public partial class MainWindow : Window
             MainBorder.CornerRadius = new CornerRadius(4);
             SizeToContent = SizeToContent.WidthAndHeight;
             Width = double.NaN;
+            MinWidth = 120;
+            MinHeight = 30;
+            if (CompactItems.ItemsSource == null)
+                CompactItems.ItemsSource = new List<CompactItem>();
         }
         else
         {
@@ -327,6 +349,8 @@ public partial class MainWindow : Window
             MainBorder.CornerRadius = new CornerRadius(12);
             SizeToContent = SizeToContent.Height;
             Width = 320;
+            MinWidth = 0;
+            MinHeight = 0;
         }
 
         UpdateWindowOptionsVisibility();
@@ -471,16 +495,18 @@ public partial class MainWindow : Window
     private class CompactItem
     {
         public string ShortLabel { get; set; } = "QT";
+        public string? ModelName { get; set; }
         public string PercentText { get; set; } = "";
         public int PercentValue { get; set; }
         public System.Windows.Media.Brush Color { get; set; } = System.Windows.Media.Brushes.Gray;
         public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;
 
-        public int BlockWidth => DisplayStyle == DisplayStyle.Speed ? 18 : 28;
+        public int BlockWidth => 84;
 
         public Visibility LabelVisible => DisplayStyle != DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
         public Visibility PercentVisible => DisplayStyle == DisplayStyle.Percent ? Visibility.Visible : Visibility.Collapsed;
         public Visibility GraphVisible => DisplayStyle == DisplayStyle.Graph ? Visibility.Visible : Visibility.Collapsed;
         public Visibility DotVisible => DisplayStyle == DisplayStyle.Speed ? Visibility.Visible : Visibility.Collapsed;
+        public Visibility ModelNameVisible => !string.IsNullOrEmpty(ModelName) ? Visibility.Visible : Visibility.Collapsed;
     }
 }
