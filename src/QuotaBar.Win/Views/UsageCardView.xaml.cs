@@ -28,4 +28,22 @@ public partial class UsageCardView : System.Windows.Controls.UserControl
 
     public static readonly DependencyProperty EntriesProperty =
         DependencyProperty.Register(nameof(Entries), typeof(List<QuotaEntry>), typeof(UsageCardView), new PropertyMetadata(null));
+
+    public double FontScale
+    {
+        get => (double)GetValue(FontScaleProperty);
+        set => SetValue(FontScaleProperty, value);
+    }
+
+    public static readonly DependencyProperty FontScaleProperty =
+        DependencyProperty.Register(nameof(FontScale), typeof(double), typeof(UsageCardView), new PropertyMetadata(1d));
+
+    public bool ShowGlmKstWarning
+    {
+        get => (bool)GetValue(ShowGlmKstWarningProperty);
+        set => SetValue(ShowGlmKstWarningProperty, value);
+    }
+
+    public static readonly DependencyProperty ShowGlmKstWarningProperty =
+        DependencyProperty.Register(nameof(ShowGlmKstWarning), typeof(bool), typeof(UsageCardView), new PropertyMetadata(false));
 }

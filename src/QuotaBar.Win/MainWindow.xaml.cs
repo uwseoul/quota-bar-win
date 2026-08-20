@@ -16,11 +16,24 @@ namespace QuotaBar.Win;
 
 public partial class MainWindow : Window
 {
+    public static readonly DependencyProperty FontScaleProperty = DependencyProperty.Register(
+        nameof(FontScale),
+        typeof(double),
+        typeof(MainWindow),
+        new PropertyMetadata(1d));
+
     private readonly UsageService _usageService = new();
     private readonly SettingsService _settingsService = new();
     private readonly DispatcherTimer _refreshTimer;
+    private static readonly TimeSpan KoreaStandardTimeOffset = TimeSpan.FromHours(9);
     private Dictionary<string, PlatformResult>? _lastResults;
     private ViewMode _currentViewMode = ViewMode.Detail;
+
+    public double FontScale
+    {
+        get => (double)GetValue(FontScaleProperty);
+        private set => SetValue(FontScaleProperty, value);
+    }
 
     public MainWindow()
     {
@@ -63,6 +76,7 @@ public partial class MainWindow : Window
 
     private void ApplySettings(AppSettings settings)
     {
+        FontScale = Converters.FontScaleConverter.Normalize(settings.FontScale);
         Topmost = settings.AlwaysOnTop;
         AlwaysOnTopToggle.IsChecked = settings.AlwaysOnTop;
         _currentViewMode = settings.ViewMode;
@@ -91,6 +105,7 @@ public partial class MainWindow : Window
     private void RefreshDetailView(Dictionary<string, PlatformResult> results)
     {
         CardsPanel.Children.Clear();
+        var nowUtc = DateTimeOffset.UtcNow;
 
         foreach (var kvp in results)
         {
@@ -101,7 +116,9 @@ public partial class MainWindow : Window
             var card = new UsageCardView
             {
                 PlatformName = kvp.Key.ToUpperInvariant(),
-                Entries = kvp.Value.Entries
+                Entries = kvp.Value.Entries,
+                FontScale = FontScale,
+                ShowGlmKstWarning = ShouldShowGlmKstWarning(kvp.Key, nowUtc)
             };
 
             if (!string.IsNullOrEmpty(kvp.Value.Error))
@@ -124,6 +141,13 @@ public partial class MainWindow : Window
 
             CardsPanel.Children.Add(card);
         }
+    }
+
+    internal static bool ShouldShowGlmKstWarning(string platformId, DateTimeOffset now)
+    {
+        var koreaStandardTime = now.ToUniversalTime().ToOffset(KoreaStandardTimeOffset);
+        return string.Equals(platformId, "glm", StringComparison.OrdinalIgnoreCase)
+            && koreaStandardTime.Hour is >= 15 and <= 18;
     }
 
     private void RefreshSimpleView(Dictionary<string, PlatformResult> results)

@@ -1,16 +1,31 @@
 using System.Windows;
 using QuotaBar.Core.Models;
 using QuotaBar.Core.Services;
+using QuotaBar.Win.Converters;
 
 namespace QuotaBar.Win;
 
 public partial class SettingsWindow : Window
 {
+    public static readonly DependencyProperty FontScaleProperty = DependencyProperty.Register(
+        nameof(FontScale),
+        typeof(double),
+        typeof(SettingsWindow),
+        new PropertyMetadata(1d));
+
     private readonly SettingsService _settingsService = new();
     private AppSettings _settings = new();
 
+    public double FontScale
+    {
+        get => (double)GetValue(FontScaleProperty);
+        private set => SetValue(FontScaleProperty, value);
+    }
+
     public SettingsWindow()
     {
+        _settings = _settingsService.Load();
+        FontScale = FontScaleConverter.Normalize(_settings.FontScale);
         InitializeComponent();
         MouseLeftButtonDown += (_, __) => DragMove();
         Loaded += OnLoaded;
@@ -18,8 +33,6 @@ public partial class SettingsWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
-        _settings = _settingsService.Load();
-
         // GLM Platform
         GlmZaiRadio.IsChecked = _settings.GlmPlatform == GLMPlatform.Zai;
         GlmBigmodelRadio.IsChecked = _settings.GlmPlatform == GLMPlatform.Bigmodel;
@@ -51,6 +64,13 @@ public partial class SettingsWindow : Window
         // Theme
         ThemeCombo.ItemsSource = new[] { "Auto", "Light", "Dark" };
         ThemeCombo.SelectedItem = _settings.Theme;
+
+        FontScaleCombo.SelectedIndex = _settings.FontScale switch
+        {
+            1.25 => 1,
+            1.5 => 2,
+            _ => 0
+        };
 
         // Refresh Interval
         RefreshIntervalBox.Text = _settings.RefreshIntervalSeconds.ToString();
@@ -90,6 +110,12 @@ public partial class SettingsWindow : Window
             _settings.ViewMode = vm;
 
         _settings.Theme = ThemeCombo.SelectedItem?.ToString() ?? "Auto";
+        _settings.FontScale = FontScaleCombo.SelectedIndex switch
+        {
+            1 => 1.25,
+            2 => 1.5,
+            _ => 1.0
+        };
 
         // Launch at Login
         var launchChanged = _settings.LaunchAtLogin != (LaunchAtLoginCheck.IsChecked == true);

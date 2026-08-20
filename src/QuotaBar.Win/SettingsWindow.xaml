@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:QuotaBar.Win"
+        xmlns:converters="clr-namespace:QuotaBar.Win.Converters"
         mc:Ignorable="d"
         Title="Settings"
         Width="320"
@@ -12,6 +14,9 @@
         Background="Transparent"
         Topmost="True"
         ResizeMode="NoResize">
+    <Window.Resources>
+        <converters:FontScaleConverter x:Key="FontScaleConverter"/>
+    </Window.Resources>
     <Border Background="#FF2D2D2D"
             CornerRadius="12"
             Padding="16"
@@ -23,7 +28,7 @@
                     Foreground="White"
                     Background="Transparent"
                     BorderThickness="0"
-                    FontSize="14"
+                    FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Padding="4"
@@ -33,7 +38,7 @@
 
             <TextBlock Text="Settings"
                        Foreground="White"
-                       FontSize="16"
+                       FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=16}"
                        FontWeight="Bold"
                        Margin="0,0,0,12"/>
 
@@ -43,12 +48,12 @@
                     <!-- Account API -->
                     <TextBlock Text="Account API"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                FontWeight="Bold"
                                Margin="0,8,0,4"/>
                     <TextBlock Text="GLM Platform"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,2"/>
                     <StackPanel Orientation="Horizontal" Margin="0,2">
                         <RadioButton x:Name="GlmZaiRadio"
@@ -63,77 +68,77 @@
                     </StackPanel>
                     <TextBlock Text="GLM API Key"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,4,0,2"/>
                     <TextBox x:Name="GlmApiKeyBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
                     <TextBlock Text="MiniMax API Key"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="8,8,0,2"/>
                     <TextBox x:Name="MiniMaxApiKeyBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
                     <TextBlock Text="OpenCode Go Workspace ID"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="8,8,0,2"/>
                     <TextBox x:Name="OpenCodeGoWorkspaceBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
                     <TextBlock Text="OpenCode Go Auth Cookie"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="8,8,0,2"/>
                     <TextBox x:Name="OpenCodeGoCookieBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
                     <TextBlock Text="Codex (optional, overrides ~/.codex/auth.json)"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                Margin="0,6,0,2"/>
                     <TextBlock Text="Codex Auth Token"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,2"/>
                     <TextBox x:Name="CodexTokenBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
                     <TextBlock Text="Codex Account ID"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,4,0,2"/>
                     <TextBox x:Name="CodexAccountIdBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
                     <!-- Platforms -->
                     <TextBlock Text="Platforms"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                FontWeight="Bold"
                                Margin="0,12,0,4"/>
                     <CheckBox x:Name="GlmCheck" Content="GLM" Foreground="White" Margin="0,2"/>
@@ -144,12 +149,12 @@
                     <!-- Menu Bar Display -->
                     <TextBlock Text="Menu Bar Display"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                FontWeight="Bold"
                                Margin="0,12,0,4"/>
                     <TextBlock Text="View Mode"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,2"/>
                     <ComboBox x:Name="ViewModeCombo"
                               Background="#FF1A1A1A"
@@ -158,7 +163,7 @@
                               Margin="0,2"/>
                     <TextBlock Text="Mode"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,4,0,2"/>
                     <ComboBox x:Name="MenuBarModeCombo"
                               Background="#FF1A1A1A"
@@ -167,7 +172,7 @@
                               Margin="0,2"/>
                     <TextBlock Text="Style"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,4,0,2"/>
                     <ComboBox x:Name="DisplayStyleCombo"
                               Background="#FF1A1A1A"
@@ -178,9 +183,22 @@
                     <!-- Appearance -->
                     <TextBlock Text="Appearance"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                FontWeight="Bold"
                                Margin="0,12,0,4"/>
+                    <TextBlock Text="Font Scale"
+                               Foreground="White"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
+                               Margin="0,2"/>
+                    <ComboBox x:Name="FontScaleCombo"
+                               Background="#FF1A1A1A"
+                               Foreground="White"
+                               BorderBrush="#FF3D3D3D"
+                               Margin="0,2">
+                        <ComboBoxItem Tag="1.0">Normal (100%)</ComboBoxItem>
+                        <ComboBoxItem Tag="1.25">Large (125%)</ComboBoxItem>
+                        <ComboBoxItem Tag="1.5">Extra Large (150%)</ComboBoxItem>
+                    </ComboBox>
                     <ComboBox x:Name="ThemeCombo"
                               Background="#FF1A1A1A"
                               Foreground="White"
@@ -190,24 +208,24 @@
                     <!-- Refresh Interval -->
                     <TextBlock Text="Refresh"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                FontWeight="Bold"
                                Margin="0,12,0,4"/>
                     <TextBlock Text="Refresh Interval (seconds)"
                                Foreground="White"
-                               FontSize="11"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
                                Margin="0,2"/>
                     <TextBox x:Name="RefreshIntervalBox"
                              Background="#FF1A1A1A"
                              Foreground="White"
                              BorderBrush="#FF3D3D3D"
                              Padding="4"
-                             FontSize="11"/>
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
                     <!-- Launch at Login -->
                     <TextBlock Text="System"
                                Foreground="#99FFFFFF"
-                               FontSize="10"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                FontWeight="Bold"
                                Margin="0,12,0,4"/>
                     <CheckBox x:Name="LaunchAtLoginCheck" Content="Launch at Login" Foreground="White" Margin="0,2"/>
@@ -220,7 +238,7 @@
                     Foreground="White"
                     BorderThickness="0"
                     Padding="8,4"
-                    FontSize="12"
+                    FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=12}"
                     FontWeight="Bold"
                     HorizontalAlignment="Stretch"
                     Margin="0,12,0,0"

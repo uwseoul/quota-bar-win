@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:QuotaBar.Win"
+        xmlns:converters="clr-namespace:QuotaBar.Win.Converters"
         xmlns:views="clr-namespace:QuotaBar.Win.Views"
         mc:Ignorable="d"
         Title="Quota Bar"
@@ -16,6 +17,9 @@
         Topmost="True"
         SizeToContent="Height"
         ResizeMode="NoResize">
+    <Window.Resources>
+        <converters:FontScaleConverter x:Key="FontScaleConverter"/>
+    </Window.Resources>
     <Border x:Name="MainBorder"
             CornerRadius="12"
             Padding="16"
@@ -35,7 +39,7 @@
                     Foreground="White"
                     Background="Transparent"
                     BorderThickness="0"
-                    FontSize="14"
+                    FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                     HorizontalAlignment="Right"
                     VerticalAlignment="Top"
                     Padding="4"
@@ -47,7 +51,7 @@
             <Grid x:Name="HeaderGrid" Margin="0,0,0,8">
                 <TextBlock Text="Quota Bar"
                            Foreground="White"
-                           FontSize="14"
+                           FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                            FontWeight="Bold"
                            VerticalAlignment="Center"/>
                 <StackPanel x:Name="WindowOptionsPanel"
@@ -75,7 +79,7 @@
                             Background="Transparent"
                             BorderThickness="0"
                             Foreground="White"
-                            FontSize="14"
+                            FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                             Click="Refresh_Click"
                             Cursor="Hand"/>
                 </StackPanel>
@@ -120,7 +124,7 @@
                                              Margin="0,0,8,0"/>
                                     <TextBlock Text="{Binding Platform}"
                                                Foreground="White"
-                                               FontSize="14"
+                                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                                                FontWeight="Bold"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
@@ -132,7 +136,7 @@
                                             VerticalAlignment="Center">
                                     <TextBlock Text="{Binding PercentText}"
                                                Foreground="White"
-                                               FontSize="14"
+                                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                                                FontWeight="Medium"
                                                VerticalAlignment="Center"
                                                Margin="0,0,8,0"
@@ -182,12 +186,12 @@
                                                 Margin="4,0,7,0">
                                         <TextBlock Text="{Binding ShortLabel}"
                                                    Foreground="#CCFFFFFF"
-                                                   FontSize="10.5"
+                                                   FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                                                    FontWeight="SemiBold"
                                                    HorizontalAlignment="Left"/>
                                         <TextBlock Text="{Binding ModelName}"
                                                    Foreground="#99FFFFFF"
-                                                   FontSize="9"
+                                                   FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=9}"
                                                    HorizontalAlignment="Left"
                                                    Visibility="{Binding ModelNameVisible}"/>
                                     </StackPanel>
@@ -195,7 +199,7 @@
                                     <TextBlock Grid.Column="1"
                                                Text="{Binding PercentText}"
                                                Foreground="White"
-                                               FontSize="13.5"
+                                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=13}"
                                                FontWeight="Medium"
                                                HorizontalAlignment="Left"
                                                VerticalAlignment="Center"
@@ -230,7 +234,7 @@
                         Style="{StaticResource ModeToggleStyle}"
                         Click="ToggleMode_Click"
                         ToolTip="Toggle View Mode"
-                        FontSize="10"
+                        FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                         Padding="2,1"
                         Margin="2,0,0,0"/>
                 <Button x:Name="CompactClose"
@@ -238,7 +242,7 @@
                         Foreground="#99FFFFFF"
                         Background="Transparent"
                         BorderThickness="0"
-                        FontSize="10"
+                        FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
                         Padding="2,1"
                         Click="CloseButton_Click"
                         Cursor="Hand"/>
