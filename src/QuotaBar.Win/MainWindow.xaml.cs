@@ -115,7 +115,7 @@ public partial class MainWindow : Window
 
             var peakMinutes = GetGlmPeakMinutesLeft(kvp.Key, nowUtc);
             var warningText = peakMinutes > 0
-                ? $"현재 시간은 GLM-5.3/GLM-5-터보는 3배 빨리 소모됩니다. ({peakMinutes / 60}시간 {peakMinutes % 60}분 남음)"
+                ? $"현재 시간은 GLM-5.3/GLM-5-터보는 3배 빨리 소모됩니다. (15:00~19:00, {peakMinutes / 60}시간 {peakMinutes % 60}분 남음)"
                 : "";
 
             var card = new UsageCardView
