@@ -113,12 +113,18 @@ public partial class MainWindow : Window
             if (kvp.Value.Error == "Disabled")
                 continue;
 
+            var peakMinutes = GetGlmPeakMinutesLeft(kvp.Key, nowUtc);
+            var warningText = peakMinutes > 0
+                ? $"현재 시간은 GLM-5.3/GLM-5-터보는 3배 빨리 소모됩니다. ({peakMinutes / 60}시간 {peakMinutes % 60}분 남음)"
+                : "";
+
             var card = new UsageCardView
             {
                 PlatformName = kvp.Key.ToUpperInvariant(),
                 Entries = kvp.Value.Entries,
                 FontScale = FontScale,
-                ShowGlmKstWarning = ShouldShowGlmKstWarning(kvp.Key, nowUtc)
+                ShowGlmKstWarning = ShouldShowGlmKstWarning(kvp.Key, nowUtc),
+                GlmPeakWarningText = warningText
             };
 
             if (!string.IsNullOrEmpty(kvp.Value.Error))
@@ -148,6 +154,20 @@ public partial class MainWindow : Window
         var koreaStandardTime = now.ToUniversalTime().ToOffset(KoreaStandardTimeOffset);
         return string.Equals(platformId, "glm", StringComparison.OrdinalIgnoreCase)
             && koreaStandardTime.Hour is >= 15 and <= 18;
+    }
+
+    internal static int GetGlmPeakMinutesLeft(string platformId, DateTimeOffset now)
+    {
+        if (!string.Equals(platformId, "glm", StringComparison.OrdinalIgnoreCase))
+            return 0;
+
+        var koreaStandardTime = now.ToUniversalTime().ToOffset(KoreaStandardTimeOffset);
+        if (koreaStandardTime.Hour is < 15 or > 18)
+            return 0;
+
+        var peakEnd = new DateTimeOffset(koreaStandardTime.Year, koreaStandardTime.Month, koreaStandardTime.Day, 19, 0, 0, KoreaStandardTimeOffset);
+        var remaining = peakEnd - koreaStandardTime;
+        return Math.Max(0, (int)remaining.TotalMinutes);
     }
 
     private void RefreshSimpleView(Dictionary<string, PlatformResult> results)

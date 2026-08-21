@@ -46,4 +46,13 @@ public partial class UsageCardView : System.Windows.Controls.UserControl
 
     public static readonly DependencyProperty ShowGlmKstWarningProperty =
         DependencyProperty.Register(nameof(ShowGlmKstWarning), typeof(bool), typeof(UsageCardView), new PropertyMetadata(false));
+
+    public string GlmPeakWarningText
+    {
+        get => (string)GetValue(GlmPeakWarningTextProperty);
+        set => SetValue(GlmPeakWarningTextProperty, value);
+    }
+
+    public static readonly DependencyProperty GlmPeakWarningTextProperty =
+        DependencyProperty.Register(nameof(GlmPeakWarningText), typeof(string), typeof(UsageCardView), new PropertyMetadata(""));
 }

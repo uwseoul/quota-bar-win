@@ -20,7 +20,7 @@
                    FontWeight="Bold"
                    Margin="0,8,0,2"/>
 
-        <TextBlock Text="현재 시간은 GLM-5.3/GLM-5-터보는 3배 빨리 소모됩니다."
+        <TextBlock Text="{Binding GlmPeakWarningText, ElementName=Root}"
                    Foreground="#FFFF6B6B"
                     FontSize="{Binding FontScale, ElementName=Root, Converter={StaticResource FontScaleConverter}, ConverterParameter=9}"
                    Margin="0,0,0,2"
