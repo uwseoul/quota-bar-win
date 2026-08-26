@@ -9,11 +9,13 @@ public class AppSettings
     public string OpenCodeGoAuthCookie { get; set; } = string.Empty;
     public string CodexAuthToken { get; set; } = string.Empty;
     public string CodexAccountId { get; set; } = string.Empty;
+    public string OpenRouterApiKey { get; set; } = string.Empty;
 
     public bool GlmEnabled { get; set; } = true;
     public bool MiniMaxEnabled { get; set; } = true;
     public bool CodexEnabled { get; set; } = true;
     public bool OpenCodeGoEnabled { get; set; } = true;
+    public bool OpenRouterEnabled { get; set; } = true;
 
     public ViewMode ViewMode { get; set; } = ViewMode.Detail;
     public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;

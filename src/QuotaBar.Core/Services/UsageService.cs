@@ -14,6 +14,7 @@ public class UsageService : IUsageService
         _fetchers.Add(new MiniMaxFetcher());
         _fetchers.Add(new CodexFetcher());
         _fetchers.Add(new OpenCodeGoFetcher());
+        _fetchers.Add(new OpenRouterFetcher());
     }
 
     public async Task<Dictionary<string, PlatformResult>> FetchAllAsync()
@@ -29,6 +30,7 @@ public class UsageService : IUsageService
                 "minimax" => settings.MiniMaxEnabled,
                 "codex" => settings.CodexEnabled,
                 "opencodego" => settings.OpenCodeGoEnabled,
+                "openrouter" => settings.OpenRouterEnabled,
                 _ => true
             };
 

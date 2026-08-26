@@ -187,6 +187,7 @@ public partial class MainWindow : Window
                 "minimax" => "MiniMax",
                 "codex" => "Codex",
                 "opencodego" => "OpenCode Go",
+                "openrouter" => "OpenRouter",
                 _ => kvp.Key
             };
 
@@ -219,11 +220,15 @@ public partial class MainWindow : Window
 
             foreach (var entry in visibleEntries)
             {
+                // OpenRouter 무제한 키는 PercentDisplay가 N/A이고 ModelName에 $금액이 있음
+                var text = entry.PercentDisplay;
+                if (text == "N/A" && !string.IsNullOrEmpty(entry.ModelName) && entry.ModelName.Contains('$'))
+                    text = entry.ModelName;
                 simpleItems.Add(new SimpleItem
                 {
                     Platform = platformName,
-                    PercentText = $"{entry.DisplayPercent}%",
-                    PercentValue = entry.DisplayPercent,
+                    PercentText = text,
+                    PercentValue = entry.UsagePercent < 0 ? 0 : entry.DisplayPercent,
                     Color = SpeedStatusToBrush(entry.SpeedStatus),
                     DisplayStyle = settings.DisplayStyle
                 });
@@ -273,12 +278,21 @@ public partial class MainWindow : Window
             var visibleEntries = GetVisibleEntries(kvp.Value.Entries, kvp.Key, settings);
             foreach (var entry in visibleEntries)
             {
+                var pctText = entry.PercentDisplay;
+                // 무제한 키(N/A)는 달러 금액을 바로 보여줌 — Compact에서도 동일
+                if (pctText == "N/A" && !string.IsNullOrEmpty(entry.ModelName) && entry.ModelName.Contains('$'))
+                    pctText = entry.ModelName;
+                else if (pctText == "N/A" && entry.Name.Contains('$'))
+                    pctText = entry.Name;
+                else if (pctText != "N/A")
+                    pctText = $"{entry.DisplayPercent}%";
+
                 items.Add(new CompactItem
                 {
                     ShortLabel = GetShortLabel(entry.Name),
                     ModelName = entry.ModelName,
-                    PercentText = $"{entry.DisplayPercent}%",
-                    PercentValue = entry.DisplayPercent,
+                    PercentText = pctText,
+                    PercentValue = entry.UsagePercent < 0 ? 0 : entry.DisplayPercent,
                     Color = SpeedStatusToBrush(entry.SpeedStatus),
                     DisplayStyle = settings.DisplayStyle
                 });
@@ -299,6 +313,8 @@ public partial class MainWindow : Window
             return "QT";
 
         var lower = name.ToLowerInvariant();
+        if (lower.Contains("openrouter") || lower.Contains("credit") || lower.Contains("$"))
+            return "OR";
         if (lower.Contains("5") && (lower.Contains("hour") || lower.Contains("5h")))
             return "5H";
         if (lower.Contains("weekly") || lower.Contains("week"))
@@ -311,6 +327,8 @@ public partial class MainWindow : Window
             return "RV";
         if (lower.Contains("rolling"))
             return "RL";
+        if (lower.Contains("usage"))
+            return "OR";
         return "QT";
     }
 
