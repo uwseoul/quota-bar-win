@@ -57,11 +57,13 @@
                          </Grid.ColumnDefinitions>
  
                          <!-- Name -->
-                         <TextBlock Grid.Column="0"
-                                    Text="{Binding Name}"
-                                    Foreground="White"
-                                    FontSize="{Binding FontScale, ElementName=Root, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
-                                    VerticalAlignment="Center"/>
+                          <TextBlock Grid.Column="0"
+                                     Text="{Binding Name}"
+                                     Foreground="White"
+                                     FontSize="{Binding FontScale, ElementName=Root, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
+                                     VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"
+                                     ToolTip="{Binding Name}"/>
  
                          <!-- Reset Timer -->
                           <TextBlock Grid.Column="1"

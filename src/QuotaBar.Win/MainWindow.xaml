@@ -126,7 +126,9 @@
                                                Foreground="White"
                                                FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=14}"
                                                FontWeight="Bold"
-                                               VerticalAlignment="Center"/>
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="{Binding Platform}"/>
                                 </StackPanel>
 
                                 <!-- Right info area: Percent -> Graph -->
@@ -173,9 +175,11 @@
                             <DataTemplate>
                                 <Grid Width="{Binding BlockWidth}"
                                       Height="34"
-                                      Margin="4,1">
+                                      Margin="4,1"
+                                      ToolTip="{Binding ToolTipText}"
+                                      ToolTipService.InitialShowDelay="300">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
                                     <!-- Label + Model -->
@@ -193,6 +197,7 @@
                                                    Foreground="#99FFFFFF"
                                                    FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:MainWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=9}"
                                                    HorizontalAlignment="Left"
+                                                   TextTrimming="CharacterEllipsis"
                                                    Visibility="{Binding ModelNameVisible}"/>
                                     </StackPanel>
                                     <!-- Percent value (Percent style) -->

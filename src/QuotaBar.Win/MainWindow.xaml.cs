@@ -258,7 +258,8 @@ public partial class MainWindow : Window
                     ModelName = null,
                     PercentText = "Err",
                     Color = SpeedStatusToBrush(null),
-                    DisplayStyle = settings.DisplayStyle
+                    DisplayStyle = settings.DisplayStyle,
+                    ToolTipText = kvp.Value.Error
                 });
                 continue;
             }
@@ -271,7 +272,8 @@ public partial class MainWindow : Window
                     ModelName = null,
                     PercentText = "N/A",
                     Color = SpeedStatusToBrush(null),
-                    DisplayStyle = settings.DisplayStyle
+                    DisplayStyle = settings.DisplayStyle,
+                    ToolTipText = "No data"
                 });
                 continue;
             }
@@ -288,14 +290,26 @@ public partial class MainWindow : Window
                 else if (pctText != "N/A")
                     pctText = $"{entry.DisplayPercent}%";
 
+                // Compact 전용 축약: "(rem $X)" 제거 — 전체 문자열은 ToolTip으로
+                var remIdx = pctText.IndexOf(" (rem ", StringComparison.Ordinal);
+                if (remIdx > 0)
+                    pctText = pctText.Substring(0, remIdx);
+
+                var shortModel = GetShortModelName(entry.ModelName);
+                var toolTipParts = new[] { entry.Name, entry.ModelName, pctText }
+                    .Where(p => !string.IsNullOrEmpty(p))
+                    .Distinct()
+                    .ToList();
+
                 items.Add(new CompactItem
                 {
                     ShortLabel = GetShortLabel(entry.Name),
-                    ModelName = entry.ModelName,
+                    ModelName = shortModel,
                     PercentText = pctText,
                     PercentValue = entry.UsagePercent < 0 ? 0 : entry.DisplayPercent,
                     Color = SpeedStatusToBrush(entry.SpeedStatus),
-                    DisplayStyle = settings.DisplayStyle
+                    DisplayStyle = settings.DisplayStyle,
+                    ToolTipText = string.Join(" · ", toolTipParts)
                 });
             }
         }
@@ -319,7 +333,7 @@ public partial class MainWindow : Window
             return "5H";
         if (lower.Contains("weekly") || lower.Contains("week"))
             return "WK";
-        if (lower.Contains("antigravity") || lower.Contains("gemini"))
+        if (lower.Contains("antigravity") || lower.Contains("gemini") || lower.Contains("claude") || lower.Contains("gpt"))
             return "AG";
         if (lower.Contains("openrouter") || lower.Contains("credit") || lower.Contains("$"))
             return "OR";
@@ -334,6 +348,47 @@ public partial class MainWindow : Window
         if (lower.Contains("usage"))
             return "OR";
         return "QT";
+    }
+
+    /// <summary>
+    /// Compacts a long model name for the fixed-width (84px) compact block:
+    /// null→null, known group aliases, vendor prefixes, parenthetical
+    /// qualifiers removed, then hard-cut to 10 chars + ellipsis.
+    /// </summary>
+    private static string? GetShortModelName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        var s = name.Trim();
+
+        // Known verbose group names (Antigravity)
+        if (s.Equals("GEMINI MODELS", StringComparison.OrdinalIgnoreCase))
+            return "Gemini";
+        if (s.Equals("CLAUDE AND GPT MODELS", StringComparison.OrdinalIgnoreCase))
+            return "Claude/GPT";
+
+        // Vendor prefixes (MiniMax precedent)
+        foreach (var prefix in new[] { "google/", "anthropic-", "minimax-", "coding-" })
+        {
+            if (s.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                s = s.Substring(prefix.Length);
+                break;
+            }
+        }
+
+        // Parenthetical qualifiers: "Gemini 3 Pro (High)" → "Gemini 3 Pro",
+        // "$25.50 (rem $100.00)" → "$25.50"
+        var paren = s.IndexOf('(');
+        if (paren > 0)
+            s = s.Substring(0, paren).Trim();
+
+        if (string.IsNullOrEmpty(s))
+            return null;
+
+        // Hard cut for anything still too long for the 84px block
+        return s.Length > 12 ? s.Substring(0, 10) + "…" : s;
     }
 
     private static System.Windows.Media.Brush SpeedStatusToBrush(SpeedStatus? status) => status switch
@@ -566,6 +621,7 @@ public partial class MainWindow : Window
         public int PercentValue { get; set; }
         public System.Windows.Media.Brush Color { get; set; } = System.Windows.Media.Brushes.Gray;
         public DisplayStyle DisplayStyle { get; set; } = DisplayStyle.Percent;
+        public string ToolTipText { get; set; } = "";
 
         public int BlockWidth => 84;
 
