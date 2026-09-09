@@ -188,6 +188,7 @@ public partial class MainWindow : Window
                 "codex" => "Codex",
                 "opencodego" => "OpenCode Go",
                 "openrouter" => "OpenRouter",
+                "antigravity" => "Antigravity",
                 _ => kvp.Key
             };
 
@@ -313,6 +314,8 @@ public partial class MainWindow : Window
             return "QT";
 
         var lower = name.ToLowerInvariant();
+        if (lower.Contains("antigravity") || lower.Contains("gemini"))
+            return "AG";
         if (lower.Contains("openrouter") || lower.Contains("credit") || lower.Contains("$"))
             return "OR";
         if (lower.Contains("5") && (lower.Contains("hour") || lower.Contains("5h")))

@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="Settings"
         Width="320"
-        Height="520"
+        Height="560"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -43,7 +43,7 @@
                        Margin="0,0,0,12"/>
 
             <ScrollViewer VerticalScrollBarVisibility="Auto"
-                          MaxHeight="340">
+                          MaxHeight="380">
                 <StackPanel Margin="0,0,0,16">
                     <!-- Account API -->
                     <TextBlock Text="Account API"
@@ -146,6 +146,26 @@
                              Padding="4"
                              FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
 
+                    <TextBlock Text="Antigravity (optional, auto-detects agy login)"
+                               Foreground="#99FFFFFF"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=10}"
+                               Margin="0,8,0,2"/>
+                    <TextBlock Text="Antigravity Token File (leave empty for auto)"
+                               Foreground="White"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"
+                               Margin="0,2"/>
+                    <TextBox x:Name="AntigravityTokenFileBox"
+                             Background="#FF1A1A1A"
+                             Foreground="White"
+                             BorderBrush="#FF3D3D3D"
+                             Padding="4"
+                             FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=11}"/>
+                    <TextBlock Text="Auto: Windows Credential Manager (gemini:antigravity) → ~/.gemini/antigravity-cli/antigravity-oauth-token. IDE 실행 중이면 로컬 RPC 폴백."
+                               Foreground="#77FFFFFF"
+                               FontSize="{Binding FontScale, RelativeSource={RelativeSource AncestorType={x:Type local:SettingsWindow}}, Converter={StaticResource FontScaleConverter}, ConverterParameter=9}"
+                               TextWrapping="Wrap"
+                               Margin="0,2,0,0"/>
+
                     <!-- Platforms -->
                     <TextBlock Text="Platforms"
                                Foreground="#99FFFFFF"
@@ -157,6 +177,7 @@
                     <CheckBox x:Name="CodexCheck" Content="Codex" Foreground="White" Margin="0,2"/>
                     <CheckBox x:Name="OpenCodeGoCheck" Content="OpenCode Go" Foreground="White" Margin="0,2"/>
                     <CheckBox x:Name="OpenRouterCheck" Content="OpenRouter" Foreground="White" Margin="0,2"/>
+                    <CheckBox x:Name="AntigravityCheck" Content="Antigravity" Foreground="White" Margin="0,2"/>
 
                     <!-- Menu Bar Display -->
                     <TextBlock Text="Menu Bar Display"

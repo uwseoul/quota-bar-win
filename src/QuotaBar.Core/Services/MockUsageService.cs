@@ -157,6 +157,48 @@ public class MockUsageService : IUsageService
                         TotalDurationSeconds = 2_592_000
                     }
                 }
+            },
+            ["antigravity"] = new PlatformResult
+            {
+                Entries = new List<QuotaEntry>
+                {
+                    new()
+                    {
+                        Id = "antigravity-gemini-models-weekly",
+                        PlatformId = "antigravity",
+                        Name = "GEMINI MODELS Weekly",
+                        ModelName = "GEMINI MODELS",
+                        UsagePercent = 0.35,
+                        Usage = null,
+                        Total = null,
+                        ResetSeconds = 264180,
+                        TotalDurationSeconds = 604800
+                    },
+                    new()
+                    {
+                        Id = "antigravity-gemini-models-5h",
+                        PlatformId = "antigravity",
+                        Name = "GEMINI MODELS 5H",
+                        ModelName = "GEMINI MODELS",
+                        UsagePercent = 0.12,
+                        Usage = null,
+                        Total = null,
+                        ResetSeconds = 7200,
+                        TotalDurationSeconds = 18000
+                    },
+                    new()
+                    {
+                        Id = "antigravity-claude-and-gpt-models-weekly",
+                        PlatformId = "antigravity",
+                        Name = "CLAUDE AND GPT MODELS Weekly",
+                        ModelName = "CLAUDE AND GPT MODELS",
+                        UsagePercent = 0.08,
+                        Usage = null,
+                        Total = null,
+                        ResetSeconds = 180000,
+                        TotalDurationSeconds = 604800
+                    }
+                }
             }
         };
 

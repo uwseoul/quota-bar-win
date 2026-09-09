@@ -15,6 +15,7 @@ public class UsageService : IUsageService
         _fetchers.Add(new CodexFetcher());
         _fetchers.Add(new OpenCodeGoFetcher());
         _fetchers.Add(new OpenRouterFetcher());
+        _fetchers.Add(new AntigravityFetcher());
     }
 
     public async Task<Dictionary<string, PlatformResult>> FetchAllAsync()
@@ -31,6 +32,7 @@ public class UsageService : IUsageService
                 "codex" => settings.CodexEnabled,
                 "opencodego" => settings.OpenCodeGoEnabled,
                 "openrouter" => settings.OpenRouterEnabled,
+                "antigravity" => settings.AntigravityEnabled,
                 _ => true
             };
 

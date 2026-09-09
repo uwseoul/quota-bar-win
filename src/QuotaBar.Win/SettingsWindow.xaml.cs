@@ -43,6 +43,7 @@ public partial class SettingsWindow : Window
         CodexTokenBox.Text = _settings.CodexAuthToken;
         CodexAccountIdBox.Text = _settings.CodexAccountId;
         OpenRouterApiKeyBox.Text = _settings.OpenRouterApiKey;
+        AntigravityTokenFileBox.Text = _settings.AntigravityTokenFile;
 
         // Platforms
         GlmCheck.IsChecked = _settings.GlmEnabled;
@@ -50,6 +51,7 @@ public partial class SettingsWindow : Window
         CodexCheck.IsChecked = _settings.CodexEnabled;
         OpenCodeGoCheck.IsChecked = _settings.OpenCodeGoEnabled;
         OpenRouterCheck.IsChecked = _settings.OpenRouterEnabled;
+        AntigravityCheck.IsChecked = _settings.AntigravityEnabled;
 
         // Menu Bar Mode
         MenuBarModeCombo.ItemsSource = Enum.GetNames(typeof(MenuBarMode));
@@ -98,11 +100,13 @@ public partial class SettingsWindow : Window
         _settings.CodexAuthToken = CodexTokenBox.Text;
         _settings.CodexAccountId = CodexAccountIdBox.Text;
         _settings.OpenRouterApiKey = OpenRouterApiKeyBox.Text;
+        _settings.AntigravityTokenFile = AntigravityTokenFileBox.Text;
         _settings.GlmEnabled = GlmCheck.IsChecked == true;
         _settings.MiniMaxEnabled = MiniMaxCheck.IsChecked == true;
         _settings.CodexEnabled = CodexCheck.IsChecked == true;
         _settings.OpenCodeGoEnabled = OpenCodeGoCheck.IsChecked == true;
         _settings.OpenRouterEnabled = OpenRouterCheck.IsChecked == true;
+        _settings.AntigravityEnabled = AntigravityCheck.IsChecked == true;
 
         if (MenuBarModeCombo.SelectedItem is string modeStr && Enum.TryParse<MenuBarMode>(modeStr, out var mode))
             _settings.MenuBarMode = mode;
