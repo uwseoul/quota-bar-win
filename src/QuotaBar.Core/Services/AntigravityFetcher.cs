@@ -253,10 +253,12 @@ public class AntigravityFetcher : IUsageFetcher
 
     private static string NormalizeGroupName(string raw)
     {
-        if (string.IsNullOrWhiteSpace(raw)) return "GEMINI";
-        var upper = raw.Trim().ToUpperInvariant();
-        // Keep original but shorten: "GEMINI MODELS" stays, etc.
-        return upper;
+        if (string.IsNullOrWhiteSpace(raw)) return "Gemini";
+        var trimmed = raw.Trim();
+        var lower = trimmed.ToLowerInvariant();
+        if (lower == "gemini models" || lower == "gemini") return "Gemini";
+        if (lower == "claude and gpt models" || (lower.Contains("claude") && lower.Contains("gpt"))) return "C&G";
+        return trimmed.ToUpperInvariant();
     }
 
     private static string Slug(string s)

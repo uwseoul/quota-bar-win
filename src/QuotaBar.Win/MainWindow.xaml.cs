@@ -362,11 +362,11 @@ public partial class MainWindow : Window
 
         var s = name.Trim();
 
-        // Known verbose group names (Antigravity)
+        // Known verbose group names (Antigravity) — keep in sync with AntigravityFetcher.NormalizeGroupName
         if (s.Equals("GEMINI MODELS", StringComparison.OrdinalIgnoreCase))
             return "Gemini";
         if (s.Equals("CLAUDE AND GPT MODELS", StringComparison.OrdinalIgnoreCase))
-            return "Claude/GPT";
+            return "C&G";
 
         // Vendor prefixes (MiniMax precedent)
         foreach (var prefix in new[] { "google/", "anthropic-", "minimax-", "coding-" })
