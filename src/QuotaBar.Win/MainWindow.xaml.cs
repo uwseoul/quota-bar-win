@@ -469,7 +469,7 @@ public partial class MainWindow : Window
             MainBorder.Padding = new Thickness(16);
             MainBorder.CornerRadius = new CornerRadius(12);
             SizeToContent = SizeToContent.Height;
-            Width = 320;
+            Width = 384;
             MinWidth = 0;
             MinHeight = 0;
         }

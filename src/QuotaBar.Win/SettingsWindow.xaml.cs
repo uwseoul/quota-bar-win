@@ -122,7 +122,7 @@ public partial class SettingsWindow : Window
         {
             1 => 1.25,
             2 => 1.5,
-            _ => 1.0
+            _ => 0.9
         };
 
         // Launch at Login

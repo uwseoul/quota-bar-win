@@ -10,7 +10,7 @@
         Title="Quota Bar"
         Icon="Assets/traffic_light.ico"
         WindowStartupLocation="CenterScreen"
-        Width="320"
+        Width="384"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"

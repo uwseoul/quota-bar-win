@@ -17,5 +17,5 @@ public sealed class FontScaleConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
         => System.Windows.Data.Binding.DoNothing;
 
-    public static double Normalize(double fontScale) => fontScale is 1.25 or 1.5 ? fontScale : 1d;
+    public static double Normalize(double fontScale) => fontScale is 0.9 or 1.25 or 1.5 ? fontScale : 0.9;
 }

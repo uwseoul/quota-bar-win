@@ -30,5 +30,5 @@ public class AppSettings
     public bool LaunchAtLogin { get; set; } = false;
 
     public int RefreshIntervalSeconds { get; set; } = 300;
-    public double FontScale { get; set; } = 1.0;
+    public double FontScale { get; set; } = 0.9;
 }

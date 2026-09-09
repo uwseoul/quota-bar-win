@@ -228,7 +228,7 @@
                                Foreground="White"
                                BorderBrush="#FF3D3D3D"
                                Margin="0,2">
-                        <ComboBoxItem Tag="1.0">Normal (100%)</ComboBoxItem>
+                        <ComboBoxItem Tag="0.9">Normal (90%)</ComboBoxItem>
                         <ComboBoxItem Tag="1.25">Large (125%)</ComboBoxItem>
                         <ComboBoxItem Tag="1.5">Extra Large (150%)</ComboBoxItem>
                     </ComboBox>
