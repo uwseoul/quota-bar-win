@@ -486,13 +486,14 @@ if($b -eq $null){ exit 1 }
 
     private async Task<List<QuotaEntry>> FetchViaLocalRpcAsync()
     {
-        // Discover agy/Antigravity process and its 127.0.0.1 listening ports.
-        // On Windows this requires WMI + netstat fallback.
-        var ports = await DiscoverLocalPortsAsync();
-        if (ports.Count == 0)
-            throw new InvalidOperationException("Local RPC: no Antigravity/agy listening port found on 127.0.0.1. Is the IDE or `agy` running?");
+        var (pid, csrfToken) = await FindAntigravityProcessWithCsrfAsync();
+        if (pid == null || string.IsNullOrWhiteSpace(csrfToken))
+            throw new InvalidOperationException("Local RPC: Antigravity process with --csrf_token not found. Is the IDE running?");
 
-        // Handler that ignores self-signed TLS (agy uses ephemeral cert)
+        var ports = await FindListeningPortsForPidAsync(pid.Value);
+        if (ports.Count == 0)
+            throw new InvalidOperationException($"Local RPC: no 127.0.0.1 LISTENING port for PID {pid}. Is the IDE running?");
+
         var handler = new HttpClientHandler
         {
             ServerCertificateCustomValidationCallback = (_, _, _, _) => true
@@ -502,42 +503,45 @@ if($b -eq $null){ exit 1 }
         Exception? lastEx = null;
         foreach (var port in ports)
         {
-            // Try both with and without CSRF token; first attempt to extract token from process args
-            string? csrf = TryGetCsrfToken(ports, port);
-            foreach (var token in new[] { csrf, null })
+            try
             {
+                var url = $"https://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/GetUserStatus";
+                var body = JsonSerializer.Serialize(new
+                {
+                    metadata = new { ideName = "antigravity", extensionName = "antigravity", ideVersion = "1.0.0" }
+                });
+                var req = new HttpRequestMessage(HttpMethod.Post, url)
+                {
+                    Content = new StringContent(body, Encoding.UTF8, "application/json")
+                };
+                req.Headers.Add("Connect-Protocol-Version", "1");
+                req.Headers.Add("X-Codeium-Csrf-Token", csrfToken!);
+
+                var resp = await client.SendAsync(req);
+                if (!resp.IsSuccessStatusCode) continue;
+
+                var json = await resp.Content.ReadAsStringAsync();
+                // Debug dump
                 try
                 {
-                    var url = $"https://127.0.0.1:{port}/exa.language_server_pb.LanguageServerService/GetUserStatus";
-                    var body = JsonSerializer.Serialize(new
-                    {
-                        metadata = new { ideName = "antigravity", extensionName = "antigravity", locale = "en" }
-                    });
-                    var req = new HttpRequestMessage(HttpMethod.Post, url)
-                    {
-                        Content = new StringContent(body, Encoding.UTF8, "application/json")
-                    };
-                    req.Headers.Add("Connect-Protocol-Version", "1");
-                    if (!string.IsNullOrWhiteSpace(token))
-                        req.Headers.Add("X-Codeium-Csrf-Token", token!);
-
-                    var resp = await client.SendAsync(req);
-                    if (!resp.IsSuccessStatusCode) continue;
-
-                    var json = await resp.Content.ReadAsStringAsync();
-                    if (!json.Contains("userStatus", StringComparison.OrdinalIgnoreCase) &&
-                        !json.Contains("remainingFraction", StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    var doc = JsonDocument.Parse(json);
-                    var entries = ParseLocalRpcResponse(doc);
-                    if (entries.Count > 0)
-                        return entries;
+                    var dbgDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuotaBar");
+                    Directory.CreateDirectory(dbgDir);
+                    File.WriteAllText(Path.Combine(dbgDir, "antigravity-local.json"), json);
                 }
-                catch (Exception ex)
-                {
-                    lastEx = ex;
-                }
+                catch { }
+
+                if (!json.Contains("userStatus", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var doc = JsonDocument.Parse(json);
+                var entries = ParseLocalRpcResponse(doc);
+                if (entries.Count > 0)
+                    return entries;
+                // If parsing found nothing but response was valid, keep trying next port
+            }
+            catch (Exception ex)
+            {
+                lastEx = ex;
             }
         }
 
@@ -545,101 +549,269 @@ if($b -eq $null){ exit 1 }
             lastEx != null ? $"Local RPC failed on all ports: {lastEx.Message}" : "Local RPC: no valid userStatus response.");
     }
 
+    private async Task<(int? pid, string? csrfToken)> FindAntigravityProcessWithCsrfAsync()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            try
+            {
+                var ps = "powershell -NoProfile -Command \"Get-CimInstance Win32_Process | Where-Object { ($_.Name -like '*antigravity*') -or ($_.CommandLine -like '*antigravity*') } | Select-Object ProcessId, CommandLine | ConvertTo-Json -Depth 1\"";
+                var psi = new ProcessStartInfo("cmd.exe", $"/c {ps}")
+                {
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using var proc = Process.Start(psi);
+                if (proc == null) return (null, null);
+                string output = await proc.StandardOutput.ReadToEndAsync();
+                proc.WaitForExit(4000);
+                if (string.IsNullOrWhiteSpace(output)) return (null, null);
+                var doc = JsonDocument.Parse(output.Trim());
+                var list = new List<JsonElement>();
+                if (doc.RootElement.ValueKind == JsonValueKind.Array)
+                    foreach (var el in doc.RootElement.EnumerateArray()) list.Add(el);
+                else if (doc.RootElement.ValueKind == JsonValueKind.Object)
+                    list.Add(doc.RootElement);
+
+                foreach (var procInfo in list)
+                {
+                    string cmdLine = procInfo.TryGetProperty("CommandLine", out var cl) && cl.ValueKind == JsonValueKind.String ? cl.GetString() ?? "" : "";
+                    if (!cmdLine.Contains("--csrf_token")) continue;
+                    var m = Regex.Match(cmdLine, @"--csrf_token[=\s]+(?:[""']([^""']+)[""']|([^\s""']+))");
+                    if (!m.Success) continue;
+                    string token = m.Groups[1].Success && !string.IsNullOrWhiteSpace(m.Groups[1].Value) ? m.Groups[1].Value : m.Groups[2].Value;
+                    int pid = procInfo.TryGetProperty("ProcessId", out var pidEl) && pidEl.ValueKind == JsonValueKind.Number ? pidEl.GetInt32() : 0;
+                    if (pid > 0 && !string.IsNullOrWhiteSpace(token))
+                        return (pid, token);
+                }
+            }
+            catch { }
+            return (null, null);
+        }
+        else
+        {
+            // Linux/macOS fallback: scan ps output
+            try
+            {
+                var psi = new ProcessStartInfo("ps", "-e -o pid,args")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using var proc = Process.Start(psi);
+                if (proc == null) return (null, null);
+                string output = await proc.StandardOutput.ReadToEndAsync();
+                proc.WaitForExit(2000);
+                foreach (var line in output.Split('\n'))
+                {
+                    if (!line.Contains("antigravity")) continue;
+                    var m = Regex.Match(line.Trim(), @"^(\d+)\s+(.+)$");
+                    if (!m.Success) continue;
+                    int pid = int.Parse(m.Groups[1].Value);
+                    string cmdLine = m.Groups[2].Value;
+                    if (!cmdLine.Contains("--csrf_token")) continue;
+                    var tm = Regex.Match(cmdLine, @"--csrf_token[=\s]+(?:[""']([^""']+)[""']|([^\s""']+))");
+                    if (!tm.Success) continue;
+                    string token = tm.Groups[1].Success ? tm.Groups[1].Value : tm.Groups[2].Value;
+                    if (!string.IsNullOrWhiteSpace(token))
+                        return (pid, token);
+                }
+            }
+            catch { }
+            return (null, null);
+        }
+    }
+
+    private async Task<List<int>> FindListeningPortsForPidAsync(int pid)
+    {
+        var ports = new List<int>();
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var psi = new ProcessStartInfo("netstat", "-ano")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+                using var proc = Process.Start(psi);
+                if (proc == null) return ports;
+                string output = await proc.StandardOutput.ReadToEndAsync();
+                proc.WaitForExit(3000);
+                foreach (var line in output.Split('\n'))
+                {
+                    var trimmed = line.Trim();
+                    if (!trimmed.Contains("127.0.0.1")) continue;
+                    if (!trimmed.Contains("LISTENING", StringComparison.OrdinalIgnoreCase)) continue;
+                    var parts = Regex.Split(trimmed, @"\s+");
+                    if (parts.Length < 5) continue;
+                    if (!int.TryParse(parts[4], out var colPid) || colPid != pid) continue;
+                    string addr = parts[1];
+                    var portStr = addr.Split(':').Last();
+                    if (int.TryParse(portStr, out var port)) ports.Add(port);
+                }
+            }
+            else
+            {
+                var psi = new ProcessStartInfo("ss", "-lptn")
+                {
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                };
+                using var proc = Process.Start(psi);
+                if (proc != null)
+                {
+                    string output = await proc.StandardOutput.ReadToEndAsync();
+                    proc.WaitForExit(2000);
+                    foreach (Match m in Regex.Matches(output, @"127\.0\.0\.1:(\d+)"))
+                        if (int.TryParse(m.Groups[1].Value, out var p)) ports.Add(p);
+                }
+            }
+        }
+        catch { }
+        return ports.Distinct().ToList();
+    }
+
     private List<QuotaEntry> ParseLocalRpcResponse(JsonDocument doc)
     {
         var entries = new List<QuotaEntry>();
         JsonElement root = doc.RootElement;
-
-        // rpc response wraps in different shapes: {userStatus:{...}} or {userStatus:{quota...}}
         JsonElement status = root;
         if (root.TryGetProperty("userStatus", out var us))
             status = us;
 
-        // Try to find per-model quota configs
-        // Observed keys: quotaInfo, modelQuotas, quotas, limitGroups
-        JsonElement quotasEl = default;
-        bool found = false;
-        string[] candidateKeys = new[] { "quotaInfo", "modelQuotas", "quotas", "modelQuotaGroups", "limitGroups", "modelLimits" };
-        foreach (var key in candidateKeys)
+        // Correct shape per basic-antigravity-usage: status.cascadeModelConfigData.clientModelConfigs[]
+        if (status.TryGetProperty("cascadeModelConfigData", out var cascade) &&
+            cascade.TryGetProperty("clientModelConfigs", out var configs) &&
+            configs.ValueKind == JsonValueKind.Array)
         {
-            if (status.TryGetProperty(key, out var q) && q.ValueKind == JsonValueKind.Array)
-            { quotasEl = q; found = true; break; }
-            if (status.TryGetProperty(key, out var q2) && q2.ValueKind == JsonValueKind.Object)
+            foreach (var model in configs.EnumerateArray())
             {
-                // object with nested array
-                foreach (var prop in q2.EnumerateObject())
+                try
                 {
-                    if (prop.Value.ValueKind == JsonValueKind.Array) { quotasEl = prop.Value; found = true; break; }
-                }
-                if (found) break;
-            }
-        }
+                    string label = "Unknown";
+                    if (model.TryGetProperty("label", out var lb) && lb.ValueKind == JsonValueKind.String)
+                        label = lb.GetString() ?? label;
+                    else if (model.TryGetProperty("modelOrAlias", out var moa) && moa.ValueKind == JsonValueKind.Object && moa.TryGetProperty("model", out var m) && m.ValueKind == JsonValueKind.String)
+                        label = m.GetString() ?? label;
 
-        if (!found)
-        {
-            // Fallback: search any array containing remainingFraction
-            foreach (var prop in status.EnumerateObject())
-            {
-                if (prop.Value.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var item in prop.Value.EnumerateArray())
+                    string normalized = label.ToLowerInvariant();
+                    if (normalized.Contains("autocomplete") || normalized.Contains("embedding"))
+                        continue;
+
+                    double? remainingFraction = null;
+                    string? resetTime = null;
+                    if (model.TryGetProperty("quotaInfo", out var qi) && qi.ValueKind == JsonValueKind.Object)
                     {
-                        if (item.TryGetProperty("remainingFraction", out _))
-                        { quotasEl = prop.Value; found = true; break; }
+                        if (qi.TryGetProperty("remainingFraction", out var rf))
+                        {
+                            if (rf.ValueKind == JsonValueKind.Number) remainingFraction = rf.GetDouble();
+                            else if (rf.ValueKind == JsonValueKind.String && double.TryParse(rf.GetString(), out var d)) remainingFraction = d;
+                        }
+                        if (qi.TryGetProperty("resetTime", out var rt) && rt.ValueKind == JsonValueKind.String)
+                            resetTime = rt.GetString();
                     }
+
+                    if (remainingFraction == null && !string.IsNullOrEmpty(resetTime))
+                        remainingFraction = 0.0;
+                    if (remainingFraction == null) continue;
+
+                    double used = Math.Clamp(1.0 - remainingFraction.Value, 0, 1);
+                    int? resetSeconds = null;
+                    if (!string.IsNullOrEmpty(resetTime) && DateTimeOffset.TryParse(resetTime, out var ra))
+                        resetSeconds = Math.Max(0, (int)(ra - DateTimeOffset.UtcNow).TotalSeconds);
+
+                    // label examples: "Gemini 3 Pro (High)" -> keep as is, short handling in UI will map 5H/Weekly is not in local RPC; local only has 5H per model
+                    entries.Add(new QuotaEntry
+                    {
+                        Id = $"antigravity-{Slug(label)}",
+                        PlatformId = "antigravity",
+                        Name = label,
+                        ModelName = label,
+                        UsagePercent = used,
+                        Usage = null,
+                        Total = null,
+                        ResetSeconds = resetSeconds,
+                        TotalDurationSeconds = 5 * 60 * 60
+                    });
                 }
-                if (found) break;
+                catch { }
             }
-        }
 
-        if (!found) return entries;
-
-        foreach (var item in quotasEl.EnumerateArray())
-        {
+            // Also add credit info if available (monthlyPromptCredits)
             try
             {
-                string name = "GEMINI MODELS";
-                if (item.TryGetProperty("displayName", out var dn) && dn.ValueKind == JsonValueKind.String)
-                    name = dn.GetString() ?? name;
-                else if (item.TryGetProperty("modelName", out var mn) && mn.ValueKind == JsonValueKind.String)
-                    name = mn.GetString() ?? name;
-                else if (item.TryGetProperty("group", out var g) && g.ValueKind == JsonValueKind.String)
-                    name = g.GetString() ?? name;
-
-                double? remainingFraction = null;
-                if (item.TryGetProperty("remainingFraction", out var rf))
+                if (status.TryGetProperty("planStatus", out var plan) && plan.ValueKind == JsonValueKind.Object)
                 {
-                    if (rf.ValueKind == JsonValueKind.Number) remainingFraction = rf.GetDouble();
-                    else if (rf.ValueKind == JsonValueKind.String && double.TryParse(rf.GetString(), out var d)) remainingFraction = d;
+                    bool hasMonthly = plan.TryGetProperty("planInfo", out var pi) && pi.TryGetProperty("monthlyPromptCredits", out var mc) && mc.ValueKind == JsonValueKind.Number;
+                    bool hasAvail = plan.TryGetProperty("availablePromptCredits", out var ac) && ac.ValueKind == JsonValueKind.Number;
+                    if (hasMonthly && hasAvail)
+                    {
+                        double monthly = plan.GetProperty("planInfo").GetProperty("monthlyPromptCredits").GetDouble();
+                        double avail = plan.GetProperty("availablePromptCredits").GetDouble();
+                        if (monthly > 0)
+                        {
+                            double usedCred = Math.Clamp((monthly - avail) / monthly, 0, 1);
+                            // Don't override model quotas; add as separate entry only if no model entries
+                            if (entries.Count == 0)
+                            {
+                                entries.Add(new QuotaEntry
+                                {
+                                    Id = "antigravity-credits",
+                                    PlatformId = "antigravity",
+                                    Name = "Credits",
+                                    ModelName = "Antigravity",
+                                    UsagePercent = usedCred,
+                                    Usage = (long)(monthly - avail),
+                                    Total = (long)monthly,
+                                    ResetSeconds = null,
+                                    TotalDurationSeconds = 30 * 24 * 60 * 60
+                                });
+                            }
+                        }
+                    }
                 }
-
-                string? resetTime = null;
-                if (item.TryGetProperty("resetTime", out var rt) && rt.ValueKind == JsonValueKind.String)
-                    resetTime = rt.GetString();
-
-                if (remainingFraction == null && !string.IsNullOrEmpty(resetTime))
-                    remainingFraction = 0.0;
-                if (remainingFraction == null) continue;
-
-                double used = Math.Clamp(1.0 - remainingFraction.Value, 0, 1);
-                int? resetSeconds = null;
-                if (!string.IsNullOrEmpty(resetTime) && DateTimeOffset.TryParse(resetTime, out var ra))
-                    resetSeconds = Math.Max(0, (int)(ra - DateTimeOffset.UtcNow).TotalSeconds);
-
-                entries.Add(new QuotaEntry
-                {
-                    Id = $"antigravity-{Slug(name)}-rpc",
-                    PlatformId = "antigravity",
-                    Name = $"{name} 5H",
-                    ModelName = name,
-                    UsagePercent = used,
-                    Usage = null,
-                    Total = null,
-                    ResetSeconds = resetSeconds,
-                    TotalDurationSeconds = 5 * 60 * 60
-                });
             }
             catch { }
+
+            return entries;
+        }
+
+        // Fallback: legacy generic search (for different IDE versions)
+        foreach (var prop in status.EnumerateObject())
+        {
+            if (prop.Value.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in prop.Value.EnumerateArray())
+                {
+                    if (item.TryGetProperty("remainingFraction", out _) || (item.TryGetProperty("quotaInfo", out var q) && q.TryGetProperty("remainingFraction", out _)))
+                    {
+                        // re-use same logic but generic
+                        try
+                        {
+                            string name = "GEMINI MODELS";
+                            if (item.TryGetProperty("label", out var dn) && dn.ValueKind == JsonValueKind.String) name = dn.GetString() ?? name;
+                            double? rf2 = null;
+                            string? rt2 = null;
+                            JsonElement qi2 = item;
+                            if (item.TryGetProperty("quotaInfo", out var q2)) qi2 = q2;
+                            if (qi2.TryGetProperty("remainingFraction", out var rf)) rf2 = rf.ValueKind == JsonValueKind.Number ? rf.GetDouble() : null;
+                            if (qi2.TryGetProperty("resetTime", out var rt) && rt.ValueKind == JsonValueKind.String) rt2 = rt.GetString();
+                            if (rf2 == null && !string.IsNullOrEmpty(rt2)) rf2 = 0.0;
+                            if (rf2 == null) continue;
+                            double used = Math.Clamp(1.0 - rf2.Value, 0, 1);
+                            int? rs = null;
+                            if (!string.IsNullOrEmpty(rt2) && DateTimeOffset.TryParse(rt2, out var ra)) rs = Math.Max(0, (int)(ra - DateTimeOffset.UtcNow).TotalSeconds);
+                            entries.Add(new QuotaEntry { Id = $"antigravity-{Slug(name)}-rpc", PlatformId = "antigravity", Name = name, ModelName = name, UsagePercent = used, ResetSeconds = rs, TotalDurationSeconds = 5 * 60 * 60 });
+                        }
+                        catch { }
+                    }
+                }
+            }
         }
 
         return entries;
