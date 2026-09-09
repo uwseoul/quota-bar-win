@@ -22,6 +22,11 @@ public class QuotaEntry
             if (UsagePercent < 0)
                 return SpeedStatus.Normal;
 
+            // No quota consumed is always healthy, even when an upstream API
+            // omits its reset timestamp/duration.
+            if (UsagePercent <= 0)
+                return SpeedStatus.Slow;
+
             if (TotalDurationSeconds == null || TotalDurationSeconds.Value <= 0)
                 return SpeedStatus.Normal;
 
