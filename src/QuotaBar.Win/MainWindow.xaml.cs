@@ -314,14 +314,15 @@ public partial class MainWindow : Window
             return "QT";
 
         var lower = name.ToLowerInvariant();
-        if (lower.Contains("antigravity") || lower.Contains("gemini"))
-            return "AG";
-        if (lower.Contains("openrouter") || lower.Contains("credit") || lower.Contains("$"))
-            return "OR";
+        // Priority: specific window labels before generic provider names
         if (lower.Contains("5") && (lower.Contains("hour") || lower.Contains("5h")))
             return "5H";
         if (lower.Contains("weekly") || lower.Contains("week"))
             return "WK";
+        if (lower.Contains("antigravity") || lower.Contains("gemini"))
+            return "AG";
+        if (lower.Contains("openrouter") || lower.Contains("credit") || lower.Contains("$"))
+            return "OR";
         if (lower.Contains("monthly") || lower.Contains("month"))
             return "MO";
         if (lower.Contains("7d"))

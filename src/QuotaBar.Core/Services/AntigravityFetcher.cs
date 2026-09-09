@@ -139,6 +139,14 @@ public class AntigravityFetcher : IUsageFetcher
         }
 
         var quotaJson = await quotaResp.Content.ReadAsStringAsync();
+        // Debug dump for diagnosis (user-reported 0% yellow)
+        try
+        {
+            var dbgDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuotaBar");
+            Directory.CreateDirectory(dbgDir);
+            File.WriteAllText(Path.Combine(dbgDir, "antigravity-last.json"), quotaJson);
+        }
+        catch { }
         var doc = JsonDocument.Parse(quotaJson);
 
         var entries = new List<QuotaEntry>();
@@ -166,6 +174,16 @@ public class AntigravityFetcher : IUsageFetcher
                 double? remainingFraction = null;
                 if (bucket.TryGetProperty("remainingFraction", out var rf) && rf.ValueKind == JsonValueKind.Number)
                     remainingFraction = rf.GetDouble();
+                // also handle string-encoded number
+                else if (bucket.TryGetProperty("remainingFraction", out var rfStr) && rfStr.ValueKind == JsonValueKind.String && double.TryParse(rfStr.GetString(), out var rfParsed))
+                    remainingFraction = rfParsed;
+
+                // available flag: true means full quota (remaining 1.0)
+                if (remainingFraction == null && bucket.TryGetProperty("available", out var av))
+                {
+                    if (av.ValueKind == JsonValueKind.True) remainingFraction = 1.0;
+                    else if (av.ValueKind == JsonValueKind.False) remainingFraction = 0.0;
+                }
 
                 string? resetTime = null;
                 if (bucket.TryGetProperty("resetTime", out var rt) && rt.ValueKind == JsonValueKind.String)
@@ -178,6 +196,7 @@ public class AntigravityFetcher : IUsageFetcher
                 if (remainingFraction == null)
                     continue;
 
+                // remainingFraction 0..1 (1 = full). Convert to used.
                 double usedPercent = 1.0 - remainingFraction.Value;
                 usedPercent = Math.Clamp(usedPercent, 0, 1);
 
